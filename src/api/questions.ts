@@ -877,4 +877,58 @@ export async function deleteQuestions(ids: string[]) {
   }
 }
 
+// 批量更新题目
+export async function batchUpdateQuestions(
+  ids: string[],
+  updates: {
+    difficulty?: number
+    subject?: string
+    grade?: string
+    semester?: string | null
+    textbook_version?: string | null
+    tags?: string[]
+  },
+): Promise<void> {
+  if (!isSupabaseReady) {
+    throw new Error('Supabase 未配置，无法批量更新题目')
+  }
+
+  if (ids.length === 0) {
+    throw new Error('请至少选择一个题目')
+  }
+
+  const updateData: any = {}
+  if (updates.difficulty !== undefined) {
+    updateData.difficulty = updates.difficulty
+  }
+  if (updates.subject !== undefined) {
+    updateData.subject = updates.subject
+  }
+  if (updates.grade !== undefined) {
+    updateData.grade = updates.grade
+  }
+  if (updates.semester !== undefined) {
+    updateData.semester = updates.semester
+  }
+  if (updates.textbook_version !== undefined) {
+    updateData.textbook_version = updates.textbook_version
+  }
+  if (updates.tags !== undefined) {
+    updateData.tags = updates.tags
+  }
+
+  if (Object.keys(updateData).length === 0) {
+    throw new Error('请至少选择一个要更新的字段')
+  }
+
+  const { error } = await supabase
+    .from('questions')
+    .update(updateData)
+    .in('id', ids)
+
+  if (error) {
+    throw new Error(`批量更新失败: ${error.message}`)
+  }
+}
+
 

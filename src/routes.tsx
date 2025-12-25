@@ -8,6 +8,7 @@ import AdminPapers from './pages/AdminPapers'
 import AdminStats from './pages/AdminStats'
 import AdminUsers from './pages/AdminUsers'
 import AdminGrading from './pages/AdminGrading'
+import AdminConfig from './pages/AdminConfig'
 import Exam from './pages/Exam'
 import Result from './pages/Result'
 import Parent from './pages/Parent'
@@ -87,6 +88,14 @@ export const router = createBrowserRouter([
         element: (
           <ProtectedRoute roles={['admin', 'teacher']}>
             <AdminGrading />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/config',
+        element: (
+          <ProtectedRoute roles={['admin', 'teacher']}>
+            <AdminConfig />
           </ProtectedRoute>
         ),
       },

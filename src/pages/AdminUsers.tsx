@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listUsers, updateUser, type UserRow } from '../api/users'
+import { batchImportStudents, parseCSVFile, type StudentImportRow } from '../api/batchImport'
 import type { Role } from '../context/AuthContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -10,6 +11,8 @@ export default function AdminUsers() {
   const [roleFilter, setRoleFilter] = useState<Role | 'all'>('all')
   const [keyword, setKeyword] = useState('')
   const [message, setMessage] = useState<string | null>(null)
+  const [showImportDialog, setShowImportDialog] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['admin-users'],
@@ -26,6 +29,23 @@ export default function AdminUsers() {
     },
     onError: (err: any) => {
       setMessage(err?.message || '更新失败')
+    },
+  })
+
+  const importMutation = useMutation({
+    mutationFn: batchImportStudents,
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ['admin-users'] })
+      setShowImportDialog(false)
+      setMessage(
+        `导入完成：成功 ${result.success} 个，失败 ${result.failed} 个${
+          result.errors.length > 0 ? `\n错误：${result.errors.slice(0, 5).join('; ')}` : ''
+        }`,
+      )
+      setTimeout(() => setMessage(null), 5000)
+    },
+    onError: (err: any) => {
+      setMessage(err?.message || '导入失败')
     },
   })
 
@@ -52,11 +72,46 @@ export default function AdminUsers() {
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">用户管理</h1>
-        <p className="text-sm text-slate-600">
-          查看并管理系统用户角色与账号状态（禁用后无法登录和访问受保护页面）。
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">用户管理</h1>
+          <p className="text-sm text-slate-600">
+            查看并管理系统用户角色与账号状态（禁用后无法登录和访问受保护页面）。
+          </p>
+        </div>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setShowImportDialog(true)
+            fileInputRef.current?.click()
+          }}
+        >
+          批量导入学生
+        </button>
+        <input
+          type="file"
+          accept=".csv"
+          className="hidden"
+          ref={fileInputRef}
+          onChange={async (e) => {
+            const file = e.target.files?.[0]
+            if (!file) return
+            try {
+              const students = await parseCSVFile(file)
+              if (students.length === 0) {
+                alert('CSV文件中没有有效数据')
+                return
+              }
+              if (confirm(`确定要导入 ${students.length} 个学生吗？`)) {
+                importMutation.mutate(students)
+              }
+            } catch (err: any) {
+              alert(err?.message || '解析CSV文件失败')
+            } finally {
+              e.target.value = ''
+            }
+          }}
+        />
       </div>
 
       {message && (

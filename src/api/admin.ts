@@ -162,6 +162,72 @@ export async function updatePaper(
   }
 }
 
+// 批量发布/下线试卷
+export async function batchUpdatePapers(
+  paperIds: string[],
+  updates: { published?: boolean },
+): Promise<void> {
+  if (!isSupabaseReady) {
+    throw new Error('Supabase 未配置')
+  }
+
+  if (paperIds.length === 0) {
+    throw new Error('请至少选择一个试卷')
+  }
+
+  const { error } = await supabase
+    .from('papers')
+    .update(updates)
+    .in('id', paperIds)
+
+  if (error) {
+    throw new Error(`批量更新失败: ${error.message}`)
+  }
+
+  // 如果批量发布，发送通知给学生
+  if (updates.published === true) {
+    try {
+      const { createNotificationsForUsers } = await import('./notifications')
+      // 获取所有学生用户ID
+      const { data: students } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('role', 'student')
+
+      if (students && students.length > 0) {
+        // 为每个发布的试卷发送通知
+        for (const paperId of paperIds) {
+          const { data: paper } = await supabase
+            .from('papers')
+            .select('title, start_time, end_time')
+            .eq('id', paperId)
+            .maybeSingle()
+
+          if (paper) {
+            const startTime = paper.start_time
+              ? new Date(paper.start_time).toLocaleString('zh-CN')
+              : '立即开始'
+            const endTime = paper.end_time
+              ? new Date(paper.end_time).toLocaleString('zh-CN')
+              : '无限制'
+
+            await createNotificationsForUsers(
+              students.map((s) => s.id),
+              'exam_start',
+              '新试卷已发布',
+              `试卷"${paper.title || '未知试卷'}"已发布。开始时间：${startTime}，结束时间：${endTime}`,
+              paperId,
+            )
+          }
+        }
+      }
+    } catch (err) {
+      // 通知发送失败不影响试卷发布
+      console.warn('发送批量发布通知失败', err)
+    }
+  }
+}
+
 // 删除试卷
 export async function deletePaper(paperId: string): Promise<void> {
   if (!isSupabaseReady) {

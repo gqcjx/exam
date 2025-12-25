@@ -1,4 +1,4 @@
--- 随机抽题函数
+-- 随机抽题函数（已设置search_path确保安全性）
 create or replace function fn_random_questions(
   p_subject text default null,
   p_grade text default null,
@@ -9,6 +9,8 @@ create or replace function fn_random_questions(
 returns setof questions
 language sql
 stable
+security definer
+set search_path = public
 as $$
   select *
   from questions

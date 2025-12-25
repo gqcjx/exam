@@ -3,9 +3,10 @@ import type { Dispatch, SetStateAction } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { randomQuestions, createPaperWithQuestions, createPaperManual, getPaperWithQuestions } from '../api/papers'
-import { getPaperList, updatePaper, deletePaper, type PaperListItem } from '../api/admin'
+import { getPaperList, updatePaper, deletePaper, batchUpdatePapers, type PaperListItem } from '../api/admin'
 import { listQuestions } from '../api/questions'
 import { createPaperVersion, getPaperVersions } from '../api/paperVersions'
+import { getSubjects, getGrades } from '../api/config'
 import type { QuestionItem, QuestionType } from '../types'
 import { QuestionPreview } from '../components/QuestionPreview'
 import { isSupabaseReady } from '../lib/env'
@@ -25,8 +26,8 @@ type WizardState = {
 
 const defaultWizard: WizardState = {
   title: '随机测验',
-  subject: '数学',
-  grade: '七年级',
+  subject: '',
+  grade: '',
   duration: 45,
   limit: 10,
   types: ['single', 'multiple', 'true_false', 'fill', 'short'],
@@ -40,6 +41,27 @@ export default function AdminPapers() {
   const [picked, setPicked] = useState<QuestionItem[]>([])
   const [manualSelected, setManualSelected] = useState<Record<string, { question: QuestionItem; score: number }>>({})
   const [message, setMessage] = useState<string | null>(null)
+
+  // 获取学科和年级列表
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => getSubjects(true),
+  })
+
+  const { data: grades = [] } = useQuery({
+    queryKey: ['grades'],
+    queryFn: () => getGrades(true),
+  })
+
+  // 初始化默认值
+  useEffect(() => {
+    if (subjects.length > 0 && !wizard.subject) {
+      setWizard((prev) => ({ ...prev, subject: subjects[0].name }))
+    }
+    if (grades.length > 0 && !wizard.grade) {
+      setWizard((prev) => ({ ...prev, grade: grades[0].name }))
+    }
+  }, [subjects, grades])
 
   // 试卷列表
   const { data: papers = [], isLoading: papersLoading } = useQuery({
@@ -199,6 +221,20 @@ function PaperList({
   onUpdate: (paperId: string, updates: Parameters<typeof updatePaper>[1]) => void
   onDelete: (paperId: string) => void
 }) {
+  const queryClient = useQueryClient()
+  const [selectedPaperIds, setSelectedPaperIds] = useState<Set<string>>(new Set())
+
+  const batchPublishMutation = useMutation({
+    mutationFn: ({ ids, published }: { ids: string[]; published: boolean }) =>
+      batchUpdatePapers(ids, { published }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['paper-list'] })
+      setSelectedPaperIds(new Set())
+    },
+    onError: (err: any) => {
+      alert(err?.message || '批量操作失败')
+    },
+  })
   if (isLoading) {
     return (
       <div className="card">
@@ -224,12 +260,16 @@ function PaperList({
   )
 }
 
-function PaperListItem({
+function PaperListItemWithCheckbox({
   paper,
+  selected,
+  onSelect,
   onUpdate,
   onDelete,
 }: {
   paper: PaperListItem
+  selected: boolean
+  onSelect: (selected: boolean) => void
   onUpdate: (paperId: string, updates: Parameters<typeof updatePaper>[1]) => void
   onDelete: (paperId: string) => void
 }) {
@@ -527,19 +567,40 @@ function PaperCreator({
           </div>
           <div className="space-y-2">
             <label className="text-xs text-slate-600">学科</label>
-            <input
+            <select
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               value={wizard.subject}
               onChange={(e) => setWizard((p) => ({ ...p, subject: e.target.value }))}
-            />
+            >
+              {subjects.length === 0 ? (
+                <option value="">加载中...</option>
+              ) : (
+                subjects.map((s) => (
+                  <option key={s.id} value={s.name}>
+                    {s.name}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
           <div className="space-y-2">
             <label className="text-xs text-slate-600">年级</label>
-            <input
+            <select
               className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm"
               value={wizard.grade}
               onChange={(e) => setWizard((p) => ({ ...p, grade: e.target.value }))}
-            />
+            >
+              <option value="">未分年级</option>
+              {grades.length === 0 ? (
+                <option value="">加载中...</option>
+              ) : (
+                grades.map((g) => (
+                  <option key={g.id} value={g.name}>
+                    {g.name}
+                  </option>
+                ))
+              )}
+            </select>
           </div>
           <div className="space-y-2">
             <label className="text-xs text-slate-600">时长（分钟）</label>

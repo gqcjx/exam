@@ -1,4 +1,6 @@
 import { useState, useEffect } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { getSubjects, getGrades } from '../api/config'
 import type { QuestionItem, QuestionType } from '../types'
 
 interface QuestionFormProps {
@@ -38,8 +40,19 @@ function getRandomDifficulty(): number {
 }
 
 export function QuestionForm({ question, onSubmit, onCancel, isLoading = false }: QuestionFormProps) {
-  const [subject, setSubject] = useState(question?.subject || '语文')
-  const [grade, setGrade] = useState(question?.grade || '七年级')
+  // 获取学科和年级列表
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => getSubjects(true),
+  })
+
+  const { data: grades = [] } = useQuery({
+    queryKey: ['grades'],
+    queryFn: () => getGrades(true),
+  })
+
+  const [subject, setSubject] = useState(question?.subject || subjects[0]?.name || '')
+  const [grade, setGrade] = useState(question?.grade || grades[0]?.name || '')
   const [semester, setSemester] = useState(question?.semester || getCurrentSemester())
   const [textbookVersion, setTextbookVersion] = useState(question?.textbook_version || '人教版')
   const [type, setType] = useState<QuestionType>(question?.type || 'single')
@@ -203,12 +216,15 @@ export function QuestionForm({ question, onSubmit, onCancel, isLoading = false }
             className="w-full rounded-lg border border-slate-200 px-3 py-2"
             required
           >
-            <option value="数学">数学</option>
-            <option value="语文">语文</option>
-            <option value="英语">英语</option>
-            <option value="物理">物理</option>
-            <option value="化学">化学</option>
-            <option value="科学">科学</option>
+            {subjects.length === 0 ? (
+              <option value="">加载中...</option>
+            ) : (
+              subjects.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
         <div>
@@ -219,9 +235,15 @@ export function QuestionForm({ question, onSubmit, onCancel, isLoading = false }
             className="w-full rounded-lg border border-slate-200 px-3 py-2"
           >
             <option value="">未分年级</option>
-            <option value="七年级">七年级</option>
-            <option value="八年级">八年级</option>
-            <option value="九年级">九年级</option>
+            {grades.length === 0 ? (
+              <option value="">加载中...</option>
+            ) : (
+              grades.map((g) => (
+                <option key={g.id} value={g.name}>
+                  {g.name}
+                </option>
+              ))
+            )}
           </select>
         </div>
       </div>

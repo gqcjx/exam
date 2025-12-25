@@ -7,8 +7,10 @@ import {
   deleteQuestions,
   createQuestion,
   updateQuestion,
+  batchUpdateQuestions,
 } from '../api/questions'
 import { getAllTags, createTag, updateTag, deleteTag, getTagUsageStats, type Tag } from '../api/tags'
+import { getSubjects, getGrades } from '../api/config'
 import type { QuestionsFilter, QuestionItem } from '../types'
 import { QuestionPreview } from '../components/QuestionPreview'
 import { QuestionForm } from '../components/QuestionForm'
@@ -29,6 +31,15 @@ export default function AdminQuestions() {
   const [editingQuestion, setEditingQuestion] = useState<QuestionItem | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [showTagManager, setShowTagManager] = useState(false)
+  const [showBatchEdit, setShowBatchEdit] = useState(false)
+  const [batchEditUpdates, setBatchEditUpdates] = useState<{
+    difficulty?: number
+    subject?: string
+    grade?: string
+    semester?: string | null
+    textbook_version?: string | null
+    tags?: string[]
+  }>({})
   const [tagFilter, setTagFilter] = useState<string | undefined>(undefined)
   
   const { data: tags = [] } = useQuery({
@@ -86,6 +97,22 @@ export default function AdminQuestions() {
       setImportMessage(err?.message || '批量删除失败')
     },
   })
+
+  const batchUpdateMutation = useMutation({
+    mutationFn: ({ ids, updates }: { ids: string[]; updates: typeof batchEditUpdates }) =>
+      batchUpdateQuestions(ids, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['questions'] })
+      setSelectedIds(new Set())
+      setShowBatchEdit(false)
+      setBatchEditUpdates({})
+      setImportMessage('批量更新成功')
+      setTimeout(() => setImportMessage(null), 2000)
+    },
+    onError: (err: any) => {
+      setImportMessage(err?.message || '批量更新失败')
+    },
+  })
   const createMutation = useMutation({
     mutationFn: createQuestion,
     onSuccess: () => {
@@ -107,11 +134,19 @@ export default function AdminQuestions() {
     },
   })
 
-  const subjects = useMemo(
-    () => ['全部', '数学', '语文', '英语', '物理', '化学', '科学'],
-    [],
-  )
-  const grades = useMemo(() => ['全部', '七年级', '八年级', '九年级'], [])
+  // 从数据库获取学科和年级列表
+  const { data: subjectsList = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => getSubjects(true),
+  })
+
+  const { data: gradesList = [] } = useQuery({
+    queryKey: ['grades'],
+    queryFn: () => getGrades(true),
+  })
+
+  const subjects = useMemo(() => ['全部', ...subjectsList.map((s) => s.name)], [subjectsList])
+  const grades = useMemo(() => ['全部', ...gradesList.map((g) => g.name)], [gradesList])
   const types = useMemo(
     () => [
       { value: 'single', label: '单选' },
@@ -138,11 +173,11 @@ export default function AdminQuestions() {
     if (tagFilter) {
       setFilter((prev) => ({
         ...prev,
-        tags: [tagFilter],
+        tags: [tagFilter] as any, // tags字段在QuestionsFilter中可能未定义，使用any绕过类型检查
       }))
     } else {
       setFilter((prev) => {
-        const { tags, ...rest } = prev
+        const { tags, ...rest } = prev as any
         return rest
       })
     }
@@ -252,6 +287,24 @@ export default function AdminQuestions() {
             </option>
           ))}
         </select>
+        <select
+          className="rounded-lg border border-slate-200 px-3 py-2"
+          value={tagFilter || ''}
+          onChange={(e) => setTagFilter(e.target.value || undefined)}
+        >
+          <option value="">全部标签</option>
+          {tags.map((tag) => (
+            <option key={tag.id} value={tag.name}>
+              {tag.name} ({tagStats[tag.name] || 0})
+            </option>
+          ))}
+        </select>
+        <button
+          className="btn btn-secondary"
+          onClick={() => setShowTagManager(true)}
+        >
+          管理标签
+        </button>
         <input
           placeholder="搜索题干"
           className="min-w-[180px] flex-1 rounded-lg border border-slate-200 px-3 py-2"
@@ -282,18 +335,27 @@ export default function AdminQuestions() {
               </label>
             </div>
             {selectedIds.size > 0 && (
-              <button
-                type="button"
-                className="btn btn-secondary btn-sm text-red-600 hover:bg-red-50"
-                disabled={batchDeleteMutation.isPending}
-                onClick={() => {
-                  if (confirm(`确定删除选中的 ${selectedIds.size} 道题目吗？删除后无法恢复。`)) {
-                    batchDeleteMutation.mutate(Array.from(selectedIds))
-                  }
-                }}
-              >
-                {batchDeleteMutation.isPending ? '删除中...' : `批量删除 (${selectedIds.size})`}
-              </button>
+              <>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm"
+                  onClick={() => setShowBatchEdit(true)}
+                >
+                  批量编辑 ({selectedIds.size})
+                </button>
+                <button
+                  type="button"
+                  className="btn btn-secondary btn-sm text-red-600 hover:bg-red-50"
+                  disabled={batchDeleteMutation.isPending}
+                  onClick={() => {
+                    if (confirm(`确定删除选中的 ${selectedIds.size} 道题目吗？删除后无法恢复。`)) {
+                      batchDeleteMutation.mutate(Array.from(selectedIds))
+                    }
+                  }}
+                >
+                  {batchDeleteMutation.isPending ? '删除中...' : `批量删除 (${selectedIds.size})`}
+                </button>
+              </>
             )}
           </div>
         )}
@@ -407,6 +469,163 @@ export default function AdminQuestions() {
               }}
               isLoading={createMutation.isPending || updateMutation.isPending}
             />
+          </div>
+        </div>
+      )}
+
+      {/* 批量编辑对话框 */}
+      {showBatchEdit && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="card max-w-lg w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-slate-900">
+                批量编辑 ({selectedIds.size} 道题目)
+              </h2>
+              <button
+                className="btn btn-secondary btn-sm"
+                onClick={() => {
+                  setShowBatchEdit(false)
+                  setBatchEditUpdates({})
+                }}
+              >
+                关闭
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  学科（可选）
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  value={batchEditUpdates.subject || ''}
+                  onChange={(e) =>
+                    setBatchEditUpdates((prev) => ({
+                      ...prev,
+                      subject: e.target.value || undefined,
+                    }))
+                  }
+                >
+                  <option value="">不修改</option>
+                  {subjects
+                    .filter((s) => s !== '全部')
+                    .map((s) => (
+                      <option key={s} value={s}>
+                        {s}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  年级（可选）
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  value={batchEditUpdates.grade || ''}
+                  onChange={(e) =>
+                    setBatchEditUpdates((prev) => ({
+                      ...prev,
+                      grade: e.target.value || undefined,
+                    }))
+                  }
+                >
+                  <option value="">不修改</option>
+                  {grades
+                    .filter((g) => g !== '全部')
+                    .map((g) => (
+                      <option key={g} value={g}>
+                        {g}
+                      </option>
+                    ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  难度（可选）
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  value={batchEditUpdates.difficulty || ''}
+                  onChange={(e) =>
+                    setBatchEditUpdates((prev) => ({
+                      ...prev,
+                      difficulty: e.target.value ? Number(e.target.value) : undefined,
+                    }))
+                  }
+                >
+                  <option value="">不修改</option>
+                  {[1, 2, 3, 4, 5].map((d) => (
+                    <option key={d} value={d}>
+                      难度 {d}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  学期（可选）
+                </label>
+                <select
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  value={batchEditUpdates.semester || ''}
+                  onChange={(e) =>
+                    setBatchEditUpdates((prev) => ({
+                      ...prev,
+                      semester: e.target.value || null,
+                    }))
+                  }
+                >
+                  <option value="">不修改</option>
+                  <option value="上学期">上学期</option>
+                  <option value="下学期">下学期</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-1">
+                  教材版本（可选）
+                </label>
+                <input
+                  type="text"
+                  className="w-full rounded-lg border border-slate-200 px-3 py-2"
+                  placeholder="如：人教版、苏教版等"
+                  value={batchEditUpdates.textbook_version || ''}
+                  onChange={(e) =>
+                    setBatchEditUpdates((prev) => ({
+                      ...prev,
+                      textbook_version: e.target.value || null,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex gap-2 pt-2">
+                <button
+                  className="btn btn-primary flex-1"
+                  onClick={() => {
+                    if (Object.keys(batchEditUpdates).length === 0) {
+                      alert('请至少选择一个要更新的字段')
+                      return
+                    }
+                    batchUpdateMutation.mutate({
+                      ids: Array.from(selectedIds),
+                      updates: batchEditUpdates,
+                    })
+                  }}
+                  disabled={batchUpdateMutation.isPending}
+                >
+                  {batchUpdateMutation.isPending ? '更新中...' : '确认更新'}
+                </button>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowBatchEdit(false)
+                    setBatchEditUpdates({})
+                  }}
+                >
+                  取消
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
