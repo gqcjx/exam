@@ -1,0 +1,46 @@
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  color: #0f172a;
+  background-color: #f8fafc;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: radial-gradient(circle at top right, #eef2ff 0, transparent 35%),
+    radial-gradient(circle at 20% 20%, #f5f3ff 0, transparent 25%),
+    #f8fafc;
+}
+
+a {
+  text-decoration: none;
+}
+
+.card {
+  @apply rounded-xl border border-slate-200 bg-white p-6 shadow-sm;
+}
+
+.btn {
+  @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors;
+}
+
+.btn-primary {
+  @apply bg-brand-600 text-white hover:bg-brand-700;
+}
+
+.btn-secondary {
+  @apply bg-slate-100 text-slate-800 hover:bg-slate-200;
+}
