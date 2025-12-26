@@ -301,3 +301,4 @@ COMMENT ON FUNCTION public.sync_profile_email_on_create IS '同步用户邮箱�
 COMMENT ON FUNCTION public.sync_email_on_profile_create IS '从auth.users同步邮箱到profiles，已设置search_path确保安全性';
 COMMENT ON FUNCTION public.sync_profile_email_on_update IS '更新profiles表的邮箱，已设置search_path确保安全性';
 
+

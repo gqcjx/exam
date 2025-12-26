@@ -129,3 +129,4 @@ COMMENT ON INDEX idx_wrong_questions_user_mastered IS '优化按用户和掌握�
 COMMENT ON INDEX idx_papers_published_created_by IS '优化按发布状态和创建者查询试卷的性能（部分索引）';
 COMMENT ON INDEX idx_notifications_user_read IS '优化按用户和未读状态查询通知的性能（部分索引）';
 
+

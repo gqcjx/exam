@@ -23,7 +23,8 @@ import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
-export const router = createBrowserRouter([
+export const router = createBrowserRouter(
+  [
   {
     path: '/',
     element: <Landing />,
@@ -154,5 +155,9 @@ export const router = createBrowserRouter([
     path: '*',
     element: <NotFound />,
   },
-])
+  ],
+  {
+    basename: '/exam',
+  }
+)
 

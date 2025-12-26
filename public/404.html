@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/exam/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>exam</title>
+    <script>
+      // GitHub Pages 404 重定向：将路径重定向到 index.html，由 React Router 处理
+      var path = window.location.pathname;
+      var search = window.location.search;
+      var hash = window.location.hash;
+      
+      // 如果路径不是 /exam/ 或 /exam/index.html，重定向到 /exam/index.html
+      if (!path.startsWith('/exam/')) {
+        window.location.replace('/exam/index.html' + search + hash);
+      } else {
+        // 已经在 /exam/ 路径下，重定向到 index.html
+        window.location.replace('/exam/index.html' + search + hash);
+      }
+    </script>
+  </head>
+  <body>
+    <div id="root">
+      <div style="text-align: center; padding: 50px; font-family: system-ui, sans-serif;">
+        <p>正在加载...</p>
+      </div>
+    </div>
+  </body>
+</html>
+
