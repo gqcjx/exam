@@ -157,7 +157,20 @@ export const router = createBrowserRouter(
   },
   ],
   {
-    basename: '/exam',
+    // 根据环境变量和路径决定 basename
+    // Netlify: 使用根路径 ''
+    // GitHub Pages: 使用子路径 '/exam'
+    basename: (() => {
+      if (typeof window === 'undefined') return '/exam'
+      // 检查是否在 Netlify 域名下，或者路径不是以 /exam 开头
+      const isNetlify = window.location.hostname.includes('netlify.app') || 
+                       window.location.hostname.includes('netlify.com')
+      const pathStartsWithExam = window.location.pathname.startsWith('/exam')
+      // 如果在 Netlify 且路径不是 /exam 开头，使用根路径
+      if (isNetlify && !pathStartsWithExam) return ''
+      // 否则使用 /exam（兼容 GitHub Pages）
+      return '/exam'
+    })(),
   }
 )
 

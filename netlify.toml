@@ -1,0 +1,26 @@
+[build]
+  # 构建命令
+  command = "NETLIFY=true npm run build"
+  # 发布目录
+  publish = "dist"
+  # Node.js 版本
+  environment = { NODE_VERSION = "20" }
+
+# SPA 路由重定向 - 所有路由都重定向到 index.html
+# 这样 React Router 可以正确处理客户端路由
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+
+# 环境变量配置
+# 需要在 Netlify 控制台 → Site settings → Build & deploy → Environment variables 中配置：
+# - VITE_SUPABASE_URL: 你的 Supabase 项目 URL
+# - VITE_SUPABASE_ANON_KEY: 你的 Supabase anon public key
+# 
+# 配置步骤：
+# 1. 访问 https://app.netlify.com/sites/qfce/configuration/env
+# 2. 点击 "Add a variable"
+# 3. 添加 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY
+# 4. 保存后触发重新部署
+
