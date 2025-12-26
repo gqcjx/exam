@@ -134,7 +134,7 @@ export async function getGrades(enabledOnly: boolean = true): Promise<Grade[]> {
   let query = supabase
     .from('grades')
     .select('*')
-    .order('level', { ascending: true, nullsLast: true })
+    .order('level', { ascending: true, nullsFirst: false })
     .order('display_order', { ascending: true })
 
   if (enabledOnly) {

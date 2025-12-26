@@ -58,7 +58,8 @@ export async function createPaperVersion(
   }
 
   // 创建新版本
-  const newTitle = updates?.title || `${sourcePaper.title} (v${(sourcePaper.version || 0) + 1})`
+  const sourcePaperAny = sourcePaper as any
+  const newTitle = updates?.title || `${sourcePaper.title} (v${(sourcePaperAny?.version || 0) + 1})`
 
   if (sourcePaper.mode === 'random') {
     // 随机组卷模式：使用相同的题目

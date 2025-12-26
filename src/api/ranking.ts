@@ -95,12 +95,13 @@ export async function getRanking(filter: RankingFilter = {}): Promise<RankingIte
       const totalCount = userDataList.length
       const correctRate = totalCount > 0 ? correctCount / totalCount : 0
 
+      const firstItemData = firstItem as any
       ranking.push({
         user_id: userId,
-        user_name: firstItem?.profiles?.name || '未知',
-        user_email: firstItem?.profiles?.email || '',
+        user_name: firstItemData?.profiles?.name || '未知',
+        user_email: firstItemData?.profiles?.email || '',
         paper_id: paperId,
-        paper_title: firstItem?.papers?.title || '',
+        paper_title: firstItemData?.papers?.title || '',
         score: userData.score,
         total_score: userData.totalScore,
         correct_rate: correctRate,

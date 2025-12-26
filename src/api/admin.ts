@@ -387,11 +387,12 @@ export async function gradeShortAnswer(
   try {
     const { createNotification } = await import('./notifications')
     if (answerData?.user_id && answerData?.paper_id) {
+      const paperTitle = (answerData as any).papers?.title || '未知试卷'
       await createNotification(
         answerData.user_id,
         'manual_review_completed',
         '简答题批阅完成',
-        `您的试卷"${answerData.papers?.title || '未知试卷'}"中的简答题已批阅完成，得分：${finalScore}分。`,
+        `您的试卷"${paperTitle}"中的简答题已批阅完成，得分：${finalScore}分。`,
         answerData.paper_id,
       )
     }

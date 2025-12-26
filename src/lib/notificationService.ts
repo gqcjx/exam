@@ -1,4 +1,4 @@
-import { createNotification, createNotificationsForUsers, type NotificationType } from '../api/notifications'
+import { createNotification, createNotificationsForUsers, type Notification } from '../api/notifications'
 import { supabase } from './supabaseClient'
 import { isSupabaseReady } from './env'
 
@@ -19,7 +19,7 @@ export async function notifyExamStarting(paperId: string, paperTitle: string, st
 
   await createNotificationsForUsers(
     userIds,
-    'exam_starting',
+    'exam_start',
     `考试即将开始：${paperTitle}`,
     `考试将在 ${timeUntilStart} 分钟后开始，请做好准备。`,
     paperId,
@@ -43,7 +43,7 @@ export async function notifyExamEnding(paperId: string, paperTitle: string, endT
 
   await createNotificationsForUsers(
     userIds,
-    'exam_ending',
+    'exam_end',
     `考试即将结束：${paperTitle}`,
     `考试将在 ${timeUntilEnd} 分钟后结束，请尽快提交。`,
     paperId,
@@ -56,7 +56,7 @@ export async function notifyGradePublished(paperId: string, paperTitle: string, 
 
   await createNotification(
     userId,
-    'grade_published',
+    'grade_released',
     `成绩已发布：${paperTitle}`,
     '您的考试成绩已发布，可以查看详细成绩和解析。',
     paperId,
@@ -69,7 +69,7 @@ export async function notifyGradingCompleted(paperId: string, paperTitle: string
 
   await createNotification(
     userId,
-    'grading_completed',
+    'manual_review_completed',
     `批阅完成：${paperTitle}`,
     '您的简答题已批阅完成，可以查看成绩和评语。',
     paperId,
@@ -92,7 +92,7 @@ export async function notifyPaperPublished(paperId: string, paperTitle: string) 
 
   await createNotificationsForUsers(
     userIds,
-    'paper_published',
+    'system',
     `新试卷已发布：${paperTitle}`,
     '有新的试卷可以参加，请前往查看。',
     paperId,

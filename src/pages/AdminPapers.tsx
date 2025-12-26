@@ -254,7 +254,14 @@ function PaperList({
   return (
     <div className="space-y-3">
       {papers.map((paper) => (
-        <PaperListItem key={paper.id} paper={paper} onUpdate={onUpdate} onDelete={onDelete} />
+        <PaperListItemWithCheckbox 
+          key={paper.id} 
+          paper={paper} 
+          selected={false}
+          onSelect={() => {}}
+          onUpdate={onUpdate} 
+          onDelete={onDelete} 
+        />
       ))}
     </div>
   )
@@ -484,6 +491,16 @@ function PaperCreator({
   toggleType: (type: QuestionType) => void
 }) {
   const [manualMessage, setManualMessage] = useState<string | null>(null)
+  
+  // 获取学科和年级列表
+  const { data: subjects = [] } = useQuery({
+    queryKey: ['subjects'],
+    queryFn: () => getSubjects(true),
+  })
+  const { data: grades = [] } = useQuery({
+    queryKey: ['grades'],
+    queryFn: () => getGrades(true),
+  })
 
   const { data: availableQuestions = [], isFetching: questionLoading, refetch } = useQuery({
     queryKey: ['question-list-for-manual'],
