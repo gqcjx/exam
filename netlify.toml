@@ -1,6 +1,6 @@
 [build]
   # 构建命令
-  command = "NETLIFY=true npm run build"
+  command = "npm run build"
   # 发布目录
   publish = "dist"
   # Node.js 版本
