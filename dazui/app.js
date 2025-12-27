@@ -176,22 +176,10 @@ function autoDetectLowPower() {
 	}
 }
 
-// 性能优化：背景缓存
-let backgroundCache = null;
-let backgroundDirty = true;
-
-function invalidateBackgroundCache() {
-	backgroundDirty = true;
-}
-
-function getBackgroundCache() {
-	if (!backgroundCache) {
-		backgroundCache = document.createElement('canvas');
-		backgroundCache.width = canvas.width;
-		backgroundCache.height = canvas.height;
-	}
-	return backgroundCache;
-}
+// 性能优化：背景缓存（暂时禁用，避免显示问题）
+// 如果需要进一步优化性能，可以重新启用并修复实现
+// let backgroundCache = null;
+// let backgroundDirty = true;
 
 // 启动时自动检测是否进入低配模式，支持 URL 开关 ?low=1 / ?low=0
 (() => {
@@ -2369,21 +2357,8 @@ function updateIdleFlight() {
 }
 
 function draw() {
-	// 性能优化：缓存背景，只在需要时重绘
-	if (backgroundDirty || !backgroundCache) {
-		const bgCanvas = getBackgroundCache();
-		const bgCtx = bgCanvas.getContext('2d');
-		const originalCtx = ctx;
-		ctx = bgCtx; // 临时切换上下文
-		drawBackground();
-		ctx = originalCtx; // 恢复上下文
-		backgroundDirty = false;
-	}
-	
-	// 绘制缓存的背景
-	if (backgroundCache) {
-		ctx.drawImage(backgroundCache, 0, 0);
-	}
+	// 直接绘制背景（简化实现，避免缓存问题）
+	drawBackground();
 	
 	drawItems();
 	drawBird();
