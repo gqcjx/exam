@@ -140,7 +140,41 @@ export default function Exam() {
       ...prev,
       [questionId]: value,
     }))
-  }, [])
+
+    // 自动跳转到下一题
+    const currentQuestion = questions.find((pq) => pq.question.id === questionId)
+    if (currentQuestion) {
+      const questionType = currentQuestion.question.type
+      
+      // 根据题目类型决定跳转时机
+      if (questionType === 'single' || questionType === 'true_false') {
+        // 单选题和判断题：立即跳转
+        setTimeout(() => {
+          const currentIdx = questions.findIndex((pq) => pq.question.id === questionId)
+          if (currentIdx >= 0 && currentIdx < questions.length - 1) {
+            setCurrentIndex(currentIdx + 1)
+          }
+        }, 300) // 300ms 延迟，让用户看到选择效果
+      } else if (questionType === 'multiple') {
+        // 多选题：延迟跳转，给用户时间选择多个选项
+        setTimeout(() => {
+          const currentIdx = questions.findIndex((pq) => pq.question.id === questionId)
+          if (currentIdx >= 0 && currentIdx < questions.length - 1) {
+            setCurrentIndex(currentIdx + 1)
+          }
+        }, 800) // 800ms 延迟
+      } else if (questionType === 'fill') {
+        // 填空题：延迟跳转，使用防抖
+        setTimeout(() => {
+          const currentIdx = questions.findIndex((pq) => pq.question.id === questionId)
+          if (currentIdx >= 0 && currentIdx < questions.length - 1) {
+            setCurrentIndex(currentIdx + 1)
+          }
+        }, 1000) // 1秒延迟，给用户时间完成输入
+      }
+      // 简答题（short）不自动跳转，让用户手动点击下一题
+    }
+  }, [questions])
 
   // 提交试卷
   const submitMutation = useMutation({
