@@ -79,9 +79,10 @@ export const queryClient = new QueryClient({
         // 否则使用默认的结构共享
         return newData
       },
-      // 添加错误处理
-      onError: (error) => {
-        console.warn('Query error:', error)
+    },
+    mutations: {
+      onError: (error: Error) => {
+        console.warn('Mutation error:', error)
       },
     },
   },
