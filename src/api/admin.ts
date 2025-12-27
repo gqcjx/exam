@@ -355,26 +355,48 @@ export async function getPendingGradings(params?: {
     })
   }
 
-  return (data || []).map((item: any) => {
-    const pairKey = `${item.paper_id}_${item.question_id}`
-    const maxScore = paperQuestionScores.get(pairKey) || 10
-    
-    return {
-      id: item.id,
-      user_id: item.user_id,
-      paper_id: item.paper_id,
-      question_id: item.question_id,
-      chosen: item.chosen || [],
-      score: item.score,
-      manual_score: item.manual_score,
-      status: item.status as 'pending' | 'auto' | 'graded',
-      submitted_at: item.submitted_at,
-      paper_title: item.papers?.title || '',
-      question: (item.questions || {}) as QuestionItem,
-      user_name: userNamesMap.get(item.user_id) || null,
-      max_score: maxScore,
-    }
-  })
+  return (data || [])
+    .filter((item: any) => {
+      // 过滤掉没有 questions 或 papers 数据的记录
+      return item.questions && item.papers
+    })
+    .map((item: any) => {
+      const pairKey = `${item.paper_id}_${item.question_id}`
+      const maxScore = paperQuestionScores.get(pairKey) || 10
+      
+      // 确保 question 对象有必要的字段
+      const question: QuestionItem = {
+        id: item.questions.id || item.question_id,
+        subject: item.questions.subject || '',
+        grade: item.questions.grade || null,
+        semester: item.questions.semester || null,
+        textbook_version: item.questions.textbook_version || null,
+        difficulty: item.questions.difficulty || 1,
+        type: item.questions.type || 'short',
+        stem: item.questions.stem || '',
+        options: item.questions.options || undefined,
+        answer: item.questions.answer || [],
+        analysis: item.questions.analysis || null,
+        tags: item.questions.tags || [],
+        created_by: item.questions.created_by || null,
+      }
+      
+      return {
+        id: item.id,
+        user_id: item.user_id,
+        paper_id: item.paper_id,
+        question_id: item.question_id,
+        chosen: item.chosen || [],
+        score: item.score,
+        manual_score: item.manual_score,
+        status: item.status as 'pending' | 'auto' | 'graded',
+        submitted_at: item.submitted_at,
+        paper_title: item.papers?.title || '',
+        question,
+        user_name: userNamesMap.get(item.user_id) || null,
+        max_score: maxScore,
+      }
+    })
 }
 
 // 批阅简答题
