@@ -331,9 +331,9 @@ export async function batchImportStudents(
         currentBatchNames.set('', batchNames)
       }
 
-      // 生成临时邮箱（如果没有提供邮箱）
-      // 使用更唯一的标识符：时间戳 + 随机数 + 索引
-      const email = student.email || `temp_${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@temp.local`
+      // 生成邮箱（如果没有提供邮箱）
+      // 使用 gqc@gfce.com 作为基础邮箱，添加唯一后缀避免重复
+      const email = student.email || `gqc+${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@gfce.com`
 
       // 验证必需字段
       if (!finalName || !finalName.trim()) {
