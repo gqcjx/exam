@@ -222,15 +222,11 @@ export default function Settings() {
         // 如果 profiles.phone 没有找到，说明可能不存在，可以继续
       }
 
-      // 更新 profiles 表
+      // 更新 profiles 表的其他字段（不包含 phone，phone 通过触发器同步）
       const profileUpdates: any = {
         name: realName.trim() || null,
         nickname: nickname.trim() || null,
       }
-      
-      // 学生不更新手机号
-      // 注意：非学生用户的手机号通过 auth.users.phone 更新，触发器会自动同步到 profiles.phone
-      // 所以这里不直接更新 profiles.phone，避免与触发器冲突
 
       if (profile?.role === 'student') {
         profileUpdates.school_id = schoolId
@@ -241,12 +237,18 @@ export default function Settings() {
         profileUpdates.subject_ids = subjectIds
       }
 
+      // 先更新其他字段，不涉及 phone
       const { error: profileError } = await supabase
         .from('profiles')
         .update(profileUpdates)
         .eq('user_id', session.user.id)
+        .select()
 
       if (profileError) {
+        // 如果错误是唯一约束冲突，提供更友好的错误信息
+        if (profileError.message.includes('duplicate key') || profileError.message.includes('unique constraint')) {
+          throw new Error('手机号已被其他用户使用，请使用其他手机号')
+        }
         throw new Error(profileError.message)
       }
 
@@ -255,36 +257,35 @@ export default function Settings() {
       if (profile?.role !== 'student') {
         if (cleanedPhone) {
           // 先清空旧手机号，避免触发器更新时的唯一约束冲突
-          // 注意：需要先清空，再设置新值，避免触发器在更新时遇到冲突
           const { error: clearOldPhoneError } = await supabase
             .from('profiles')
             .update({ phone: null })
             .eq('user_id', session.user.id)
           
+          // 忽略清空错误（可能已经是 null）
           if (clearOldPhoneError) {
-            console.warn('清空旧手机号失败', clearOldPhoneError.message)
-            // 继续执行，可能旧手机号已经是 null
+            console.warn('清空旧手机号时出现错误（可忽略）', clearOldPhoneError.message)
           }
 
-          // 然后更新 auth.users.phone，触发器会自动同步到 profiles.phone
+          // 等待一小段时间，确保清空操作完成
+          await new Promise(resolve => setTimeout(resolve, 100))
+
+          // 更新 auth.users.phone，触发器会自动同步到 profiles.phone
           const { error: authError } = await supabase.auth.updateUser({
             phone: `+86${cleanedPhone}`,
           })
           if (authError) {
-            // 如果更新失败，尝试恢复
             throw new Error(authError.message)
           }
         } else {
-          // 如果清空手机号，需要同时清空 profiles.phone 和 auth.users.phone
+          // 如果清空手机号，确保 profiles.phone 也为 null
           const { error: clearPhoneError } = await supabase
             .from('profiles')
             .update({ phone: null })
             .eq('user_id', session.user.id)
-          if (clearPhoneError) {
+          if (clearPhoneError && !clearPhoneError.message.includes('duplicate')) {
             throw new Error(clearPhoneError.message)
           }
-          // 注意：auth.users.phone 的清空需要通过 updateUser，但 Supabase 可能不支持设置为 null
-          // 触发器会在 auth.users.phone 更新时自动处理
         }
       }
 
