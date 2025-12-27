@@ -9,7 +9,6 @@ const adminNavItems = [
   { to: '/admin/grading', label: '批阅' },
   { to: '/admin/stats', label: '统计' },
   { to: '/admin/users', label: '用户' },
-  { to: '/admin/import-students', label: '导入学生' },
   { to: '/admin/invite-codes', label: '邀请码' },
   { to: '/admin/config', label: '配置' },
 ]
@@ -19,7 +18,6 @@ const teacherNavItems = [
   { to: '/admin/papers', label: '试卷' },
   { to: '/admin/grading', label: '批阅' },
   { to: '/admin/stats', label: '统计' },
-  { to: '/admin/import-students', label: '导入学生' },
   { to: '/admin/config', label: '配置' },
 ]
 
