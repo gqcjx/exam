@@ -1,3 +1,32 @@
+# ⚠️ 紧急：部署 Edge Function 修复 CORS 错误
+
+## 当前问题
+CORS 错误：`Response to preflight request doesn't pass access control check: It does not have HTTP ok status.`
+
+**这意味着 Edge Function 可能还没有部署，或者部署时有问题。**
+
+## 立即执行以下步骤
+
+### 步骤 1：登录 Supabase Dashboard
+1. 访问 https://supabase.com/dashboard
+2. 选择项目：`mejrbcxhbgctiwsquqaj`
+
+### 步骤 2：检查 Edge Function 是否存在
+1. 左侧菜单 → `Edge Functions`
+2. 查看是否有 `create-student` 函数
+3. **如果没有，立即创建它！**
+
+### 步骤 3：创建/更新 Edge Function
+
+#### 如果函数不存在：
+1. 点击 `Create a new function`
+2. 函数名称：**`create-student`**（必须完全一致）
+3. 点击 `Create function`
+
+#### 然后：
+1. **复制以下完整代码**（从 `supabase/functions/create-student/index.ts`）：
+
+```typescript
 import "jsr:@supabase/functions-js/edge-runtime.d.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -134,7 +163,7 @@ Deno.serve(async (req) => {
     }
 
     // 创建用户档案
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const { error: profileError2 } = await supabase.from("profiles").insert({
       user_id: authData.user.id,
       name,
       nickname: nickname || null,
@@ -144,12 +173,12 @@ Deno.serve(async (req) => {
       class_id: class_id || null,
     });
 
-    if (profileError) {
+    if (profileError2) {
       // 如果档案创建失败，删除已创建的用户
       await supabase.auth.admin.deleteUser(authData.user.id);
       return new Response(
         JSON.stringify({
-          error: profileError.message,
+          error: profileError2.message,
         }),
         {
           status: 400,
@@ -181,3 +210,76 @@ Deno.serve(async (req) => {
     );
   }
 });
+```
+
+2. **粘贴到 Supabase Dashboard 的代码编辑器**
+3. **保存代码**
+
+### 步骤 4：配置环境变量（必须！）
+
+在 Edge Function 设置页面找到 `Secrets` 或 `Environment Variables`：
+
+1. **SUPABASE_URL**
+   - 值：`https://mejrbcxhbgctiwsquqaj.supabase.co`
+
+2. **SUPABASE_ANON_KEY**
+   - 获取方式：Supabase Dashboard → Settings → API → anon public key
+   - 复制完整的 key 值
+
+3. **SUPABASE_SERVICE_ROLE_KEY**
+   - 获取方式：Supabase Dashboard → Settings → API → service_role key
+   - 复制完整的 key 值（注意保密）
+
+### 步骤 5：设置 JWT 验证
+
+在 Edge Function 设置页面：
+1. 找到 **Verify JWT** 选项
+2. **设置为 `false`**（重要！）
+
+### 步骤 6：部署
+
+1. 点击 **`Deploy`** 按钮
+2. 等待部署完成（通常几秒钟）
+3. 确保状态显示为 **"Active"** 或 **"Deployed"**
+
+### 步骤 7：验证
+
+1. 刷新前端页面（https://gqcjx.github.io）
+2. 确保已登录（且是管理员或教师）
+3. 进入"用户管理"页面
+4. 点击"批量导入学生"
+5. 选择 Excel 文件并导入
+6. 应该可以成功！
+
+## 如果仍然失败
+
+### 检查 Edge Function 日志
+1. Supabase Dashboard → Edge Functions → create-student → Logs
+2. 查看是否有错误信息
+3. 检查请求是否到达了 Edge Function
+
+### 检查浏览器控制台
+1. 按 F12 打开开发者工具
+2. 进入 `Network` 标签
+3. 尝试导入学生
+4. 找到 `create-student` 请求
+5. 查看请求和响应详情
+
+### 常见问题
+
+**Q: Edge Function 显示 "Inactive" 或 "Not Deployed"**
+A: 需要点击 Deploy 按钮重新部署。
+
+**Q: 环境变量在哪里设置？**
+A: 在 Edge Function 的设置页面，通常有 "Secrets" 或 "Environment Variables" 部分。
+
+**Q: 如何确认 Edge Function 已部署？**
+A: 在 Supabase Dashboard → Edge Functions 页面，`create-student` 应该显示为 "Active" 或 "Deployed" 状态。
+
+## 关键点
+
+1. ✅ Edge Function 名称必须是 `create-student`（完全一致）
+2. ✅ 必须设置三个环境变量（SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_SERVICE_ROLE_KEY）
+3. ✅ Verify JWT 必须设置为 `false`
+4. ✅ 必须点击 Deploy 按钮部署
+5. ✅ 确保部署状态为 "Active"
