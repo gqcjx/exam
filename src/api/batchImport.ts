@@ -334,36 +334,23 @@ export async function batchImportStudents(
       // 生成临时邮箱（如果没有提供邮箱）
       const email = student.email || `temp_${Date.now()}_${Math.random().toString(36).substring(7)}@temp.local`
 
-      // 创建用户账号
-      const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-        email: email,
-        password: student.password || '123456', // 默认密码
-        email_confirm: true,
-        phone: student.phone ? `+86${student.phone.replace(/\D/g, '')}` : undefined,
+      // 通过 Edge Function 创建用户（使用 service role key）
+      const { data: createUserData, error: createUserError } = await supabase.functions.invoke('create-student', {
+        body: {
+          email: email,
+          password: student.password || '123456',
+          phone: student.phone ? student.phone.replace(/\D/g, '') : null,
+          name: finalName,
+          nickname: student.nickname?.trim() || null,
+          school_id: school_id,
+          grade_id: grade_id,
+          class_id: class_id,
+        },
       })
 
-      if (authError || !authData.user) {
+      if (createUserError || !createUserData?.success) {
         failed++
-        errors.push(`${student.name}: ${authError?.message || '创建账号失败'}`)
-        continue
-      }
-
-      // 创建用户档案
-      const { error: profileError } = await supabase.from('profiles').insert({
-        user_id: authData.user.id,
-        name: finalName,
-        nickname: student.nickname?.trim() || null,
-        role: 'student',
-        school_id: school_id,
-        grade_id: grade_id,
-        class_id: class_id,
-      })
-
-      if (profileError) {
-        // 如果档案创建失败，删除已创建的用户
-        await supabase.auth.admin.deleteUser(authData.user.id)
-        failed++
-        errors.push(`${student.name}: ${profileError.message}`)
+        errors.push(`${student.name}: ${createUserError?.message || createUserData?.error || '创建账号失败'}`)
         continue
       }
 
