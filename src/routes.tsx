@@ -1,4 +1,4 @@
-import { createBrowserRouter } from 'react-router-dom'
+import { createBrowserRouter, Navigate } from 'react-router-dom'
 import AppLayout from './layouts/AppLayout'
 import Landing from './pages/Landing'
 import Login from './pages/Login'
@@ -30,6 +30,10 @@ export const router = createBrowserRouter(
   [
   {
     path: '/',
+    element: <Navigate to="/login" replace />,
+  },
+  {
+    path: '/landing',
     element: <Landing />,
     errorElement: <NotFound />,
   },
