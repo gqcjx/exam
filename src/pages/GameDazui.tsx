@@ -51,7 +51,8 @@ export default function GameDazui() {
       // 构建游戏 URL，传递 token 和配置
       // 根据 basename 决定路径
       const basename = window.location.pathname.startsWith('/exam') ? '/exam' : ''
-      const gameUrl = `${basename}/dazui/index.html?token=${encodeURIComponent(session.access_token)}&supabase_url=${encodeURIComponent(supabaseUrl)}&supabase_key=${encodeURIComponent(supabaseKey)}`
+      const returnUrl = `${basename}/dashboard`
+      const gameUrl = `${basename}/dazui/index.html?token=${encodeURIComponent(session.access_token)}&supabase_url=${encodeURIComponent(supabaseUrl)}&supabase_key=${encodeURIComponent(supabaseKey)}&return_url=${encodeURIComponent(returnUrl)}`
       
       // 跳转到游戏页面
       window.location.href = gameUrl

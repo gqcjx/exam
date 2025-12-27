@@ -105,6 +105,27 @@ async function saveGameScore() {
 	}
 }
 
+// 退出游戏
+async function exitGame() {
+	if (STATE.running && gameStartTime) {
+		// 如果游戏正在运行，先保存积分
+		await saveGameScore();
+	}
+	
+	// 返回上一页或主页
+	const urlParams = new URLSearchParams(window.location.search);
+	const returnUrl = urlParams.get('return_url') || '/dashboard';
+	
+	// 如果是从主应用跳转过来的，返回主应用
+	if (window.parent !== window) {
+		// 在 iframe 中
+		window.parent.postMessage({ type: 'game-exit' }, '*');
+	} else {
+		// 直接跳转
+		window.location.href = returnUrl;
+	}
+}
+
 // 页面加载时初始化 Supabase
 initSupabase();
 
@@ -119,6 +140,7 @@ const wrongRateEl = document.getElementById('wrongRate');
 const startBtn = document.getElementById('startBtn');
 const pauseBtn = document.getElementById('pauseBtn');
 const resetBtn = document.getElementById('resetBtn');
+const exitBtn = document.getElementById('exitBtn');
 const overlay = document.getElementById('overlay');
 const overlayStart = document.getElementById('overlayStart');
 const overlayTitle = document.getElementById('overlayTitle');
@@ -134,12 +156,15 @@ let musicEnabled = true;
 let lowPowerMode = false;
 let lastFrameAt = 0;
 const TARGET_FPS_LOW = 30;
+const TARGET_FPS_NORMAL = 60;
+let targetFPS = TARGET_FPS_NORMAL;
+
 function shouldSkipFrame(nowTs) {
-	if (!lowPowerMode) return false;
-	if (nowTs - lastFrameAt < (1000 / TARGET_FPS_LOW)) return true;
+	if (nowTs - lastFrameAt < (1000 / targetFPS)) return true;
 	lastFrameAt = nowTs;
 	return false;
 }
+
 function autoDetectLowPower() {
 	try {
 		const cores = navigator.hardwareConcurrency || 2;
@@ -151,6 +176,23 @@ function autoDetectLowPower() {
 	}
 }
 
+// 性能优化：背景缓存
+let backgroundCache = null;
+let backgroundDirty = true;
+
+function invalidateBackgroundCache() {
+	backgroundDirty = true;
+}
+
+function getBackgroundCache() {
+	if (!backgroundCache) {
+		backgroundCache = document.createElement('canvas');
+		backgroundCache.width = canvas.width;
+		backgroundCache.height = canvas.height;
+	}
+	return backgroundCache;
+}
+
 // 启动时自动检测是否进入低配模式，支持 URL 开关 ?low=1 / ?low=0
 (() => {
 	try {
@@ -160,7 +202,10 @@ function autoDetectLowPower() {
 		} else {
 			lowPowerMode = autoDetectLowPower();
 		}
+		
+		// 根据低配模式设置目标帧率
 		if (lowPowerMode) {
+			targetFPS = TARGET_FPS_LOW;
 			console.log('⚙️ 已启用低配模式：将降低帧率并简化特效');
 		}
 	} catch (e) {
@@ -909,8 +954,8 @@ function createParticles(x, y, color, count = 10) {
 			size: 2 + Math.random() * 3
 		});
 	}
-	// 限制粒子总量（低配更严格）
-	const maxParticles = lowPowerMode ? 60 : 160;
+	// 限制粒子总量（低配更严格，性能优化）
+	const maxParticles = lowPowerMode ? 40 : 120;
 	if (particles.length > maxParticles) {
 		particles.splice(0, particles.length - maxParticles);
 	}
@@ -2324,11 +2369,31 @@ function updateIdleFlight() {
 }
 
 function draw() {
-	drawBackground();
+	// 性能优化：缓存背景，只在需要时重绘
+	if (backgroundDirty || !backgroundCache) {
+		const bgCanvas = getBackgroundCache();
+		const bgCtx = bgCanvas.getContext('2d');
+		const originalCtx = ctx;
+		ctx = bgCtx; // 临时切换上下文
+		drawBackground();
+		ctx = originalCtx; // 恢复上下文
+		backgroundDirty = false;
+	}
+	
+	// 绘制缓存的背景
+	if (backgroundCache) {
+		ctx.drawImage(backgroundCache, 0, 0);
+	}
+	
 	drawItems();
 	drawBird();
-	drawParticles(); // 绘制粒子特效
-	drawFloatingTexts(); // 绘制浮动文字提示
+	
+	// 低配模式下减少粒子效果（性能优化）
+	if (!lowPowerMode || particles.length < 15) {
+		drawParticles();
+	}
+	
+	drawFloatingTexts();
 	
 	// 绘制错误提示（最上层）
 	if (errorPrompt.active) {
@@ -2340,14 +2405,24 @@ function draw() {
 
 function loop(ts) {
 	if (!STATE.running) return;
-	// 低配模式下丢帧以维持 30FPS 左右
+	
+	// 性能优化：动态调整帧率
 	if (shouldSkipFrame(ts)) {
 		animationId = requestAnimationFrame(loop);
 		return;
 	}
+	
 	update();
 	draw();
 	animationId = requestAnimationFrame(loop);
+	
+	// 性能监控：如果帧率过低，自动降低目标帧率
+	if (ts - lastFrameAt > 20) { // 如果帧间隔超过20ms（<50fps）
+		targetFPS = Math.max(TARGET_FPS_LOW, targetFPS - 5);
+	} else if (targetFPS < TARGET_FPS_NORMAL && ts - lastFrameAt < 16) {
+		// 如果性能恢复，逐步提高帧率
+		targetFPS = Math.min(TARGET_FPS_NORMAL, targetFPS + 1);
+	}
 }
 
 function startLoops() {
@@ -2582,6 +2657,7 @@ canvas.addEventListener('touchend', (e) => {
 startBtn.addEventListener('click', startGame);
 pauseBtn.addEventListener('click', pauseGame);
 resetBtn.addEventListener('click', resetGame);
+exitBtn.addEventListener('click', exitGame);
 overlayStart.addEventListener('click', startGame);
 musicBtn.addEventListener('click', toggleMusic);
 

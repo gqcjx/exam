@@ -54,20 +54,36 @@ export async function getGameRanking(
   gameName: string = 'dazui',
   limit: number = 100
 ): Promise<GameScoreWithProfile[]> {
-  const { data, error } = await supabase
+  // 先查询游戏积分
+  const { data: scores, error: scoresError } = await supabase
     .from('game_scores')
-    .select(`
-      *,
-      profiles:user_id (
-        name,
-        grade,
-        class
-      )
-    `)
+    .select('*')
     .eq('game_name', gameName)
     .order('best_score', { ascending: false })
     .limit(limit)
 
-  if (error) throw error
-  return data as GameScoreWithProfile[]
+  if (scoresError) throw scoresError
+  if (!scores || scores.length === 0) return []
+
+  // 获取所有 user_id
+  const userIds = [...new Set(scores.map(s => s.user_id))]
+
+  // 查询对应的 profiles
+  const { data: profiles, error: profilesError } = await supabase
+    .from('profiles')
+    .select('user_id, name, grade, class')
+    .in('user_id', userIds)
+
+  if (profilesError) throw profilesError
+
+  // 创建 user_id 到 profile 的映射
+  const profileMap = new Map(
+    (profiles || []).map(p => [p.user_id, p])
+  )
+
+  // 合并数据
+  return scores.map(score => ({
+    ...score,
+    profiles: profileMap.get(score.user_id) || null,
+  })) as GameScoreWithProfile[]
 }
