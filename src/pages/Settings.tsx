@@ -222,27 +222,16 @@ export default function Settings() {
         // 如果 profiles.phone 没有找到，说明可能不存在，可以继续
       }
 
-      // 更新 profiles 表的其他字段（不包含 phone，phone 通过触发器同步）
-      const profileUpdates: any = {
-        name: realName.trim() || null,
-        nickname: nickname.trim() || null,
-      }
-
-      if (profile?.role === 'student') {
-        profileUpdates.school_id = schoolId
-        profileUpdates.grade_id = gradeId
-        profileUpdates.class_id = classId
-      } else if (profile?.role === 'teacher') {
-        profileUpdates.school_id = teacherSchoolId
-        profileUpdates.subject_ids = subjectIds
-      }
-
-      // 先更新其他字段，不涉及 phone
-      const { error: profileError } = await supabase
-        .from('profiles')
-        .update(profileUpdates)
-        .eq('user_id', session.user.id)
-        .select()
+      // 使用 RPC 函数安全更新 profiles 表的其他字段（不包含 phone，避免触发唯一约束检查）
+      const { error: profileError } = await supabase.rpc('safe_update_profile', {
+        p_user_id: session.user.id,
+        p_name: realName.trim() || null,
+        p_nickname: nickname.trim() || null,
+        p_school_id: profile?.role === 'student' ? schoolId : (profile?.role === 'teacher' ? teacherSchoolId : null),
+        p_grade_id: profile?.role === 'student' ? gradeId : null,
+        p_class_id: profile?.role === 'student' ? classId : null,
+        p_subject_ids: profile?.role === 'teacher' ? subjectIds : null,
+      })
 
       if (profileError) {
         // 如果错误是唯一约束冲突，提供更友好的错误信息
