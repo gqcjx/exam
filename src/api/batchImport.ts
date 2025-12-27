@@ -430,7 +430,7 @@ export async function batchImportStudents(
       finalName = handleDuplicateNameBatch(finalName, class_id, classNamesMap, currentBatchNames)
 
       // 生成邮箱（如果没有提供邮箱）
-      const email = student.email || `gqc@gfce.com`
+      const email = student.email || `${Math.random().toString(36).substring(2, 9)}@gfce.com`
 
       if (!email || !email.trim()) {
         failed++
