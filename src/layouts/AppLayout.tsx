@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { NotificationBell } from '../components/NotificationBell'
+import { UserMenu } from '../components/UserMenu'
 
 const adminNavItems = [
   { to: '/admin/questions', label: '题库' },
@@ -74,15 +75,7 @@ export default function AppLayout() {
             ) : session && profile ? (
               <>
                 <NotificationBell />
-                <span className="text-sm text-slate-700">
-                  {profile.name || session.user.email || '已登录'}
-                </span>
-                {profile.role && (
-                  <span className="text-xs text-slate-500">({profile.role})</span>
-                )}
-                <button className="btn btn-secondary" onClick={() => signOut()}>
-                  退出
-                </button>
+                <UserMenu />
               </>
             ) : session ? (
               <>

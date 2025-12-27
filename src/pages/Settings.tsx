@@ -265,23 +265,38 @@ export default function Settings() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-slate-900">个人设置</h1>
-        <p className="mt-1 text-sm text-slate-600">管理您的个人信息和账户设置</p>
+    <div className="max-w-3xl mx-auto">
+      <div className="mb-8">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-brand-500 to-brand-600 text-white shadow-lg">
+            <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold text-slate-900">个人设置</h1>
+            <p className="mt-1 text-sm text-slate-600">管理您的个人信息和账户设置</p>
+          </div>
+        </div>
       </div>
 
       <form className="space-y-6" onSubmit={handleSubmit}>
         {/* 基本信息 */}
-        <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-          <h2 className="text-lg font-semibold text-slate-900 mb-4">基本信息</h2>
+        <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
+          <div className="flex items-center gap-2 mb-6">
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+            <h2 className="text-lg font-semibold text-slate-900 px-3">基本信息</h2>
+            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+          </div>
           
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">真实姓名 *</label>
+              <label className="block text-sm font-medium text-slate-700 mb-1">姓名或昵称 *</label>
               <input
                 type="text"
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                placeholder="请输入您的姓名或昵称"
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
@@ -320,8 +335,12 @@ export default function Settings() {
 
         {/* 学生设置 */}
         {profile?.role === 'student' && (
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">学生信息</h2>
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+              <h2 className="text-lg font-semibold text-slate-900 px-3">学生信息</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+            </div>
             
             <div className="space-y-4">
               <div>
@@ -378,8 +397,12 @@ export default function Settings() {
 
         {/* 老师设置 */}
         {profile?.role === 'teacher' && (
-          <div className="rounded-lg bg-white p-6 shadow-sm ring-1 ring-slate-200">
-            <h2 className="text-lg font-semibold text-slate-900 mb-4">教师信息</h2>
+          <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
+            <div className="flex items-center gap-2 mb-6">
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+              <h2 className="text-lg font-semibold text-slate-900 px-3">教师信息</h2>
+              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
+            </div>
             
             <div className="space-y-4">
               <div>
@@ -431,10 +454,17 @@ export default function Settings() {
         )}
 
         {/* 提交按钮 */}
-        <div className="flex justify-end">
+        <div className="flex justify-end gap-3 pt-4">
+          <button
+            type="button"
+            onClick={() => window.history.back()}
+            className="rounded-lg border border-slate-300 bg-white px-6 py-2.5 text-sm font-medium text-slate-700 shadow-sm transition-all hover:bg-slate-50"
+          >
+            取消
+          </button>
           <button
             type="submit"
-            className="rounded-lg bg-brand-600 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:bg-brand-700 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+            className="rounded-lg bg-gradient-to-r from-brand-600 to-brand-700 px-6 py-2.5 text-sm font-semibold text-white shadow-md transition-all hover:from-brand-700 hover:to-brand-800 hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
             disabled={saving}
           >
             {saving ? (
