@@ -1,7 +1,7 @@
 import { useState, useMemo, useRef } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { listUsers, updateUser, type UserRow } from '../api/users'
-import { batchImportStudents, parseCSVFile, type StudentImportRow } from '../api/batchImport'
+import { batchImportStudents, parseExcelFile, type StudentImportRow } from '../api/batchImport'
 import type { Role } from '../context/AuthContext'
 import { useAuth } from '../context/AuthContext'
 
@@ -33,7 +33,16 @@ export default function AdminUsers() {
   })
 
   const importMutation = useMutation({
-    mutationFn: batchImportStudents,
+    mutationFn: ({ students, fileName }: { students: StudentImportRow[]; fileName: string }) => {
+      return batchImportStudents(
+        students,
+        profile?.user_id,
+        profile?.role || undefined,
+        profile?.school_id || undefined,
+        undefined, // 管理员不需要班级限制
+        fileName,
+      )
+    },
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ['admin-users'] })
       setShowImportDialog(false)
@@ -90,23 +99,42 @@ export default function AdminUsers() {
         </button>
         <input
           type="file"
-          accept=".csv"
+          accept=".xlsx,.xls"
           className="hidden"
           ref={fileInputRef}
           onChange={async (e) => {
             const file = e.target.files?.[0]
             if (!file) return
+            
+            // 检查文件大小（限制100MB）
+            if (file.size > 100 * 1024 * 1024) {
+              alert('文件大小不能超过 100MB')
+              return
+            }
+
+            // 检查文件类型
+            const fileExtension = file.name.split('.').pop()?.toLowerCase()
+            if (!['xlsx', 'xls'].includes(fileExtension || '')) {
+              alert('只支持 Excel 格式文件（.xlsx, .xls）')
+              return
+            }
+
+            // 检查导入数量上限
             try {
-              const students = await parseCSVFile(file)
+              const students = await parseExcelFile(file)
               if (students.length === 0) {
-                alert('CSV文件中没有有效数据')
+                alert('Excel文件中没有有效数据')
                 return
               }
-              if (confirm(`确定要导入 ${students.length} 个学生吗？`)) {
-                importMutation.mutate(students)
+              if (students.length > 6000) {
+                alert(`导入数量不能超过 6000 条，当前文件包含 ${students.length} 条数据`)
+                return
+              }
+              if (confirm(`确定要导入 ${students.length} 个学生吗？\n\n注意：已存在的学生（通过邮箱或手机号判断）将被跳过，同班同名将自动添加后缀（A, AA, AAA...）`)) {
+                importMutation.mutate({ students, fileName: file.name })
               }
             } catch (err: any) {
-              alert(err?.message || '解析CSV文件失败')
+              alert(err?.message || '解析Excel文件失败')
             } finally {
               e.target.value = ''
             }

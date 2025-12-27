@@ -10,6 +10,7 @@ import AdminUsers from './pages/AdminUsers'
 import AdminGrading from './pages/AdminGrading'
 import AdminConfig from './pages/AdminConfig'
 import AdminInviteCodes from './pages/AdminInviteCodes'
+import AdminImportStudents from './pages/AdminImportStudents'
 import Exam from './pages/Exam'
 import Result from './pages/Result'
 import Parent from './pages/Parent'
@@ -115,6 +116,14 @@ export const router = createBrowserRouter(
         element: (
           <ProtectedRoute roles={['admin']}>
             <AdminInviteCodes />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/import-students',
+        element: (
+          <ProtectedRoute roles={['admin', 'teacher']}>
+            <AdminImportStudents />
           </ProtectedRoute>
         ),
       },

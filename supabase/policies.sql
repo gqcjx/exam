@@ -186,4 +186,3 @@ create policy "Users can update their own notifications" on notifications
 drop policy if exists "Users can delete their own notifications" on notifications;
 create policy "Users can delete their own notifications" on notifications
   for delete using ((select auth.uid()) = user_id);
-
