@@ -96,12 +96,16 @@ export async function getRanking(filter: RankingFilter = {}): Promise<RankingIte
       const correctRate = totalCount > 0 ? correctCount / totalCount : 0
 
       const firstItemData = firstItem as any
+      // 安全地访问嵌套属性
+      const profiles = firstItemData?.profiles
+      const papers = firstItemData?.papers
+      
       ranking.push({
         user_id: userId,
-        user_name: firstItemData?.profiles?.name || '未知',
-        user_email: firstItemData?.profiles?.email || '',
+        user_name: (profiles && typeof profiles === 'object' && profiles.name) ? profiles.name : '未知',
+        user_email: (profiles && typeof profiles === 'object' && profiles.email) ? profiles.email : '',
         paper_id: paperId,
-        paper_title: firstItemData?.papers?.title || '',
+        paper_title: (papers && typeof papers === 'object' && papers.title) ? papers.title : '未知试卷',
         score: userData.score,
         total_score: userData.totalScore,
         correct_rate: correctRate,
