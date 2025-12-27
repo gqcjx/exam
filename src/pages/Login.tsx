@@ -169,21 +169,21 @@ export default function Login() {
         <div className="rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200/60">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-slate-900">欢迎登录</h2>
-            <p className="mt-1 text-sm text-slate-500">使用真实姓名、昵称、邮箱或手机号和密码登录您的账户</p>
+            <p className="mt-1 text-sm text-slate-500">使用姓名、昵称、邮箱或手机号和密码登录您的账户</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">账号/姓名/邮箱/手机号</label>
+              <label className="block text-sm font-medium text-slate-700">姓名/昵称/邮箱/手机号</label>
               <input
                 type="text"
-                placeholder="请输入您的真实姓名、昵称、邮箱或手机号"
+                placeholder="请输入您的姓名、昵称、邮箱或手机号"
                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 value={account}
                 onChange={(e) => setAccount(e.target.value)}
                 required
               />
-              <p className="text-xs text-slate-500">所有人均可通过真实姓名或昵称登录。也可使用邮箱或手机号（学生仅支持姓名或邮箱）</p>
+              <p className="text-xs text-slate-500">学生账号不支持手机号登录</p>
             </div>
 
             <div className="space-y-1">

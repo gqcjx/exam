@@ -91,9 +91,9 @@ export default function Register() {
       return
     }
 
-    // 验证真实姓名
+    // 验证姓名或昵称
     if (!name.trim()) {
-      setError('请输入真实姓名')
+      setError('请输入姓名或昵称')
       return
     }
 
@@ -221,12 +221,12 @@ export default function Register() {
         {/* 注册表单卡片 */}
         <div className="rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200/60">
           <form className="space-y-4" onSubmit={handleSubmit}>
-            {/* 真实姓名 */}
+            {/* 姓名或昵称 */}
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">真实姓名 *</label>
+              <label className="block text-sm font-medium text-slate-700">姓名或昵称 *</label>
               <input
                 type="text"
-                placeholder="请输入您的真实姓名"
+                placeholder="请输入您的姓名或昵称"
                 className="w-full rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm transition-colors placeholder:text-slate-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
