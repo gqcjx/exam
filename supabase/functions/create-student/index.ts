@@ -36,7 +36,56 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 创建 Supabase 客户端（使用 service role key）
+    // 验证用户权限（如果 verify_jwt 为 false，需要手动验证）
+    const authHeader = req.headers.get("Authorization");
+    if (!authHeader) {
+      return new Response(JSON.stringify({ error: "未提供认证信息，请先登录" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 创建 Supabase 客户端（使用 anon key 来验证用户）
+    const anonKey = Deno.env.get("SUPABASE_ANON_KEY") ?? "";
+    const userClient = createClient(SUPABASE_URL, anonKey, {
+      global: {
+        headers: {
+          Authorization: authHeader,
+        },
+      },
+    });
+
+    // 验证用户身份和权限
+    const { data: { user }, error: userError } = await userClient.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "用户认证失败，请重新登录" }), {
+        status: 401,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 检查用户角色（必须是管理员或教师）
+    const { data: profile, error: profileError } = await userClient
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profileError || !profile) {
+      return new Response(JSON.stringify({ error: "无法获取用户信息" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (profile.role !== "admin" && profile.role !== "teacher") {
+      return new Response(JSON.stringify({ error: "只有管理员或教师可以创建学生账号" }), {
+        status: 403,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // 创建 Supabase 客户端（使用 service role key）用于创建用户
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY, {
       auth: {
         autoRefreshToken: false,

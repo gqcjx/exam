@@ -25,13 +25,19 @@
    - 复制全部内容
    - 粘贴到 Supabase Dashboard 的代码编辑器中
 
-4. **配置环境变量**
+4. **配置环境变量（重要！）**
    - 在 Edge Function 设置中找到 `Secrets` 或 `Environment Variables`
    - 添加以下环境变量：
      - `SUPABASE_URL`: 你的 Supabase 项目 URL（例如：`https://mejrbcxhbgctiwsquqaj.supabase.co`）
+     - `SUPABASE_ANON_KEY`: 你的 anon/public key（在 Supabase Dashboard → Settings → API → anon public key）
      - `SUPABASE_SERVICE_ROLE_KEY`: 你的 service_role key（在 Supabase Dashboard → Settings → API → service_role key）
 
-5. **部署**
+5. **设置 JWT 验证（重要！）**
+   - 在 Edge Function 设置页面找到 **Verify JWT** 选项
+   - **设置为 `false`**（这样我们的代码可以手动验证用户权限）
+   - 如果设置为 `true`，Supabase 会在平台层面验证 JWT，可能导致 "User not allowed" 错误
+
+6. **部署**
    - 点击 `Deploy` 按钮
    - 等待部署完成
 
@@ -72,8 +78,9 @@ npx supabase functions deploy create-student
    - 查看是否有错误信息
 
 2. **验证环境变量**：
-   - 确保 `SUPABASE_URL` 和 `SUPABASE_SERVICE_ROLE_KEY` 已正确设置
+   - 确保 `SUPABASE_URL`、`SUPABASE_ANON_KEY` 和 `SUPABASE_SERVICE_ROLE_KEY` 都已正确设置
    - 注意：`SUPABASE_SERVICE_ROLE_KEY` 是 service_role key，不是 anon key
+   - `SUPABASE_ANON_KEY` 用于验证用户身份和权限
 
 3. **检查权限**：
    - 确保当前登录用户是管理员
