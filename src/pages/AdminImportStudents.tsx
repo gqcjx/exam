@@ -251,7 +251,7 @@ export default function AdminImportStudents() {
               支持 Excel 格式文件，可以批量导入学生账号。管理员可以导入所有学校的学生，班主任只能导入自己管理的班级的学生。
               <br />
               <span className="font-medium text-slate-700">
-                单次导入上限：6000 条。已存在的学生（通过邮箱或手机号判断）将被跳过，同班同名将自动添加后缀（A, AA, AAA...）。
+                单次导入上限：6000 条。姓名和邮箱为必填项（邮箱示例：gqc@gfce.com）。已存在的学生（通过邮箱或手机号判断）将被跳过，同班同名将自动添加后缀（A, AA, AAA...）。
               </span>
             </p>
           </div>
