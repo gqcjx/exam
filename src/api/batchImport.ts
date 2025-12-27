@@ -429,14 +429,14 @@ export async function batchImportStudents(
 
       finalName = handleDuplicateNameBatch(finalName, class_id, classNamesMap, currentBatchNames)
 
-      // 生成邮箱（如果没有提供邮箱）
-      const email = student.email || `gqc+${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@gfce.com`
-
-      if (!email || !email.trim()) {
+      // 检查邮箱：如果没有提供邮箱，给出示例提示
+      if (!student.email || !student.email.trim()) {
         failed++
-        errors.push(`${student.name}: 邮箱为空`)
+        errors.push(`${student.name}: 未设置邮箱，请提供邮箱（示例：gqc@gfce.com）`)
         continue
       }
+
+      const email = student.email.trim()
 
       // 添加到创建任务列表
       createUserTasks.push({
@@ -619,12 +619,13 @@ export function generateImportTemplate(): void {
     // 说明行
     ['', '', '', '', '', '', '', ''],
     ['说明：', '', '', '', '', '', '', ''],
-    ['1. 姓名是必填项，其他字段为可选项', '', '', '', '', '', '', ''],
+    ['1. 姓名和邮箱是必填项，其他字段为可选项', '', '', '', '', '', '', ''],
     ['2. 如果Excel中没有指定学校/年级/班级，可以在导入时设置默认值', '', '', '', '', '', '', ''],
     ['3. 如果Excel中没有指定密码，将使用默认密码', '', '', '', '', '', '', ''],
     ['4. 已存在的学生（通过邮箱或手机号判断）将被跳过', '', '', '', '', '', '', ''],
     ['5. 同班同名将自动添加后缀（A, AA, AAA...）', '', '', '', '', '', '', ''],
     ['6. 单次导入数量不能超过 6000 条', '', '', '', '', '', '', ''],
+    ['7. 邮箱示例：gqc@gfce.com', '', '', '', '', '', '', ''],
   ]
 
   const worksheet = XLSX.utils.aoa_to_sheet(templateData)
