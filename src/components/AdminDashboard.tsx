@@ -5,14 +5,48 @@ import { useAuth } from '../context/AuthContext'
 
 export function AdminDashboard() {
   const { profile } = useAuth()
-  const { data: stats, isLoading: statsLoading } = useQuery({
+  const { data: stats, isLoading: statsLoading, error: statsError } = useQuery({
     queryKey: ['dashboard-stats'],
     queryFn: () => getDashboardStats(),
+    // 验证和清理数据
+    select: (data) => {
+      if (!data) return null
+      // 确保 recent_papers 是数组且每个元素都有必要的字段
+      return {
+        ...data,
+        recent_papers: (data.recent_papers || []).filter(
+          (p: any) => p && p.id && p.title
+        ),
+      }
+    },
+    // 如果数据无效，重新获取
+    retry: (failureCount, error) => {
+      if (failureCount < 2) return true
+      return false
+    },
   })
 
-  const { data: pendings = [] } = useQuery({
+  const { data: pendings = [], error: pendingsError } = useQuery({
     queryKey: ['pending-gradings-short'],
     queryFn: () => getPendingGradings({ limit: 5 }),
+    // 验证和清理数据
+    select: (data) => {
+      if (!Array.isArray(data)) return []
+      // 过滤掉无效的数据
+      return data.filter((item: any) => {
+        return (
+          item &&
+          item.id &&
+          item.paper_title !== undefined &&
+          item.user_name !== undefined
+        )
+      })
+    },
+    // 如果数据无效，重新获取
+    retry: (failureCount, error) => {
+      if (failureCount < 2) return true
+      return false
+    },
   })
 
   if (statsLoading) {
@@ -23,8 +57,21 @@ export function AdminDashboard() {
     )
   }
 
+  if (statsError) {
+    return (
+      <div className="card bg-red-50 border-red-200">
+        <p className="text-sm text-red-700">加载数据失败，请刷新页面重试</p>
+      </div>
+    )
+  }
+
   if (!stats) {
     return null
+  }
+
+  // 确保 stats.recent_papers 存在且是数组
+  if (!Array.isArray(stats.recent_papers)) {
+    stats.recent_papers = []
   }
 
   return (

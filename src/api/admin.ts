@@ -583,14 +583,23 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     .eq('status', 'pending')
 
   // 获取最近的试卷
-  const recentPapers = await getPaperList({ published: undefined })
+  let recentPapers: PaperListItem[] = []
+  try {
+    const papers = await getPaperList({ published: undefined })
+    recentPapers = (papers || [])
+      .filter((p) => p && p.id && p.title)
+      .slice(0, 5)
+  } catch (error) {
+    console.warn('获取最近试卷失败', error)
+    recentPapers = []
+  }
 
   return {
-    total_papers: totalPapers,
-    published_papers: publishedPapers,
-    total_submissions: totalSubmissions,
+    total_papers: totalPapers || 0,
+    published_papers: publishedPapers || 0,
+    total_submissions: totalSubmissions || 0,
     pending_gradings: pendingCount || 0,
-    recent_papers: (recentPapers || []).slice(0, 5).filter((p) => p && p.id && p.title),
+    recent_papers: recentPapers,
   }
 }
 
