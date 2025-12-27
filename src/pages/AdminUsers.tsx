@@ -41,6 +41,7 @@ export default function AdminUsers() {
         profile?.school_id || undefined,
         undefined, // 管理员不需要班级限制
         fileName,
+        undefined, // 进度回调（用户管理页面不需要显示进度）
       )
     },
     onSuccess: (result) => {

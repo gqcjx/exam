@@ -125,7 +125,11 @@ function GradingItem({
       <div className="space-y-3">
         <div>
           <p className="mb-2 text-sm font-semibold text-slate-700">题目：</p>
-          <QuestionPreview question={item.question} />
+          {item.question ? (
+            <QuestionPreview question={item.question} />
+          ) : (
+            <p className="text-sm text-slate-500">题目数据加载失败</p>
+          )}
         </div>
 
         <div>

@@ -284,8 +284,7 @@ export async function getPendingGradings(params?: {
       status,
       submitted_at,
       papers!inner(title),
-      questions!inner(*),
-      paper_questions!inner(score)
+      questions!inner(*)
     `)
     .eq('status', 'pending')
     .order('submitted_at', { ascending: false })
@@ -319,21 +318,63 @@ export async function getPendingGradings(params?: {
     })
   }
 
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    user_id: item.user_id,
+  // 获取所有待批阅答案的 paper_questions 分数
+  const answerIds = (data || []).map((item: any) => ({
     paper_id: item.paper_id,
     question_id: item.question_id,
-    chosen: item.chosen || [],
-    score: item.score,
-    manual_score: item.manual_score,
-    status: item.status as 'pending' | 'auto' | 'graded',
-    submitted_at: item.submitted_at,
-    paper_title: item.papers?.title || '',
-    question: item.questions as QuestionItem,
-    user_name: userNamesMap.get(item.user_id) || null,
-    max_score: item.paper_questions?.score || 10,
   }))
+  
+  const paperQuestionScores = new Map<string, number>()
+  if (answerIds.length > 0) {
+    const uniquePairs = Array.from(
+      new Set(answerIds.map((a) => `${a.paper_id}_${a.question_id}`))
+    )
+    
+    // 批量查询所有 paper_questions
+    const paperIds = [...new Set(answerIds.map((a) => a.paper_id))]
+    const questionIds = [...new Set(answerIds.map((a) => a.question_id))]
+    
+    const { data: pqDataList } = await supabase
+      .from('paper_questions')
+      .select('paper_id, question_id, score')
+      .in('paper_id', paperIds)
+      .in('question_id', questionIds)
+    
+    if (pqDataList) {
+      pqDataList.forEach((pq: any) => {
+        const pairKey = `${pq.paper_id}_${pq.question_id}`
+        paperQuestionScores.set(pairKey, pq.score || 10)
+      })
+    }
+    
+    // 为没有找到的 pair 设置默认值
+    uniquePairs.forEach((pair) => {
+      if (!paperQuestionScores.has(pair)) {
+        paperQuestionScores.set(pair, 10) // 默认分数
+      }
+    })
+  }
+
+  return (data || []).map((item: any) => {
+    const pairKey = `${item.paper_id}_${item.question_id}`
+    const maxScore = paperQuestionScores.get(pairKey) || 10
+    
+    return {
+      id: item.id,
+      user_id: item.user_id,
+      paper_id: item.paper_id,
+      question_id: item.question_id,
+      chosen: item.chosen || [],
+      score: item.score,
+      manual_score: item.manual_score,
+      status: item.status as 'pending' | 'auto' | 'graded',
+      submitted_at: item.submitted_at,
+      paper_title: item.papers?.title || '',
+      question: (item.questions || {}) as QuestionItem,
+      user_name: userNamesMap.get(item.user_id) || null,
+      max_score: maxScore,
+    }
+  })
 }
 
 // 批阅简答题
