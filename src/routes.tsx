@@ -24,6 +24,8 @@ import Unauthorized from './pages/Unauthorized'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
+import GameDazui from './pages/GameDazui'
+import GameRanking from './pages/GameRanking'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 export const router = createBrowserRouter(
@@ -176,6 +178,22 @@ export const router = createBrowserRouter(
         element: (
           <ProtectedRoute>
             <Report />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/game/dazui',
+        element: (
+          <ProtectedRoute roles={['student']}>
+            <GameDazui />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/game/ranking',
+        element: (
+          <ProtectedRoute>
+            <GameRanking />
           </ProtectedRoute>
         ),
       },
