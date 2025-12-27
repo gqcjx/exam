@@ -122,9 +122,11 @@ Deno.serve(async (req) => {
     });
 
     if (authError || !authData.user) {
+      console.error("Failed to create user:", authError);
       return new Response(
         JSON.stringify({
           error: authError?.message || "Failed to create user",
+          details: authError?.status || undefined,
         }),
         {
           status: 400,
@@ -145,11 +147,13 @@ Deno.serve(async (req) => {
     });
 
     if (profileError) {
+      console.error("Failed to create profile:", profileError);
       // 如果档案创建失败，删除已创建的用户
       await supabase.auth.admin.deleteUser(authData.user.id);
       return new Response(
         JSON.stringify({
           error: profileError.message,
+          details: profileError.code || profileError.hint || undefined,
         }),
         {
           status: 400,
@@ -169,10 +173,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       }
     );
-  } catch (e) {
+  } catch (e: any) {
+    console.error("Edge Function error:", e);
     return new Response(
       JSON.stringify({
         error: e?.message || "Unknown error",
+        details: e?.stack || undefined,
       }),
       {
         status: 500,

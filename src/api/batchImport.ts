@@ -332,32 +332,66 @@ export async function batchImportStudents(
       }
 
       // 生成临时邮箱（如果没有提供邮箱）
-      const email = student.email || `temp_${Date.now()}_${Math.random().toString(36).substring(7)}@temp.local`
+      // 使用更唯一的标识符：时间戳 + 随机数 + 索引
+      const email = student.email || `temp_${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@temp.local`
 
-      // 通过 Edge Function 创建用户（使用 service role key）
-      const { data: createUserData, error: createUserError } = await supabase.functions.invoke('create-student', {
-        body: {
-          email: email,
-          password: student.password || '123456',
-          phone: student.phone ? student.phone.replace(/\D/g, '') : null,
-          name: finalName,
-          nickname: student.nickname?.trim() || null,
-          school_id: school_id,
-          grade_id: grade_id,
-          class_id: class_id,
-        },
-      })
-
-      if (createUserError || !createUserData?.success) {
+      // 验证必需字段
+      if (!finalName || !finalName.trim()) {
         failed++
-        errors.push(`${student.name}: ${createUserError?.message || createUserData?.error || '创建账号失败'}`)
+        errors.push(`${student.name}: 姓名为空`)
         continue
       }
 
-      success++
+      if (!email || !email.trim()) {
+        failed++
+        errors.push(`${student.name}: 邮箱为空`)
+        continue
+      }
+
+      // 通过 Edge Function 创建用户（使用 service role key）
+      try {
+        const { data: createUserData, error: createUserError } = await supabase.functions.invoke('create-student', {
+          body: {
+            email: email.trim(),
+            password: student.password || '123456',
+            phone: student.phone ? student.phone.replace(/\D/g, '') : null,
+            name: finalName.trim(),
+            nickname: student.nickname?.trim() || null,
+            school_id: school_id || null,
+            grade_id: grade_id || null,
+            class_id: class_id || null,
+          },
+        })
+
+        if (createUserError) {
+          failed++
+          const errorMsg = createUserError.message || '创建账号失败'
+          errors.push(`${student.name}: ${errorMsg}`)
+          console.error(`Failed to create student ${student.name}:`, createUserError)
+          continue
+        }
+
+        if (!createUserData || !createUserData.success) {
+          failed++
+          const errorMsg = createUserData?.error || '创建账号失败'
+          errors.push(`${student.name}: ${errorMsg}`)
+          console.error(`Failed to create student ${student.name}:`, createUserData)
+          continue
+        }
+
+        success++
+      } catch (invokeError: any) {
+        failed++
+        const errorMsg = invokeError?.message || '调用 Edge Function 失败'
+        errors.push(`${student.name}: ${errorMsg}`)
+        console.error(`Failed to invoke create-student for ${student.name}:`, invokeError)
+        continue
+      }
+
     } catch (err: any) {
       failed++
       errors.push(`${student.name}: ${err?.message || '导入失败'}`)
+      console.error(`Error importing student ${student.name}:`, err)
     }
   }
 
