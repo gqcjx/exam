@@ -80,11 +80,6 @@ export const queryClient = new QueryClient({
         return newData
       },
     },
-    mutations: {
-      onError: (error: Error) => {
-        console.warn('Mutation error:', error)
-      },
-    },
   },
 })
 
