@@ -3,7 +3,7 @@ import { isSupabaseReady } from '../lib/env'
 import { cleanPhone, detectInputType } from '../utils/phoneValidation'
 
 /**
- * 通过账号（手机号或邮箱）查找用户信息
+ * 通过账号（手机号、邮箱或姓名）查找用户信息
  */
 export async function findUserByAccount(account: string): Promise<{
   user_id: string
@@ -29,9 +29,10 @@ export async function findUserByAccount(account: string): Promise<{
     }
 
     return data[0] as any
-  } else if (inputType === 'email') {
+  } else {
+    // 邮箱或姓名：使用 find_user_by_account 函数（支持邮箱和姓名）
     const { data, error } = await supabase.rpc('find_user_by_account', {
-      account_text: account,
+      account_text: account.trim(),
     })
 
     if (error || !data || data.length === 0) {
@@ -40,8 +41,42 @@ export async function findUserByAccount(account: string): Promise<{
 
     return data[0] as any
   }
+}
 
-  return null
+/**
+ * 使用姓名登录（通过姓名找到邮箱，然后使用邮箱登录）
+ */
+export async function signInWithName(name: string, password: string): Promise<{
+  data: { user: any; session: any } | null
+  error: any
+}> {
+  if (!isSupabaseReady) {
+    return {
+      data: null,
+      error: { message: 'Supabase 未配置' },
+    }
+  }
+
+  // 先通过姓名找到对应的邮箱
+  const userInfo = await findUserByAccount(name)
+  
+  if (!userInfo || !userInfo.email) {
+    return {
+      data: null,
+      error: { message: '未找到该姓名对应的账号' },
+    }
+  }
+
+  // 使用邮箱登录
+  const result = await supabase.auth.signInWithPassword({
+    email: userInfo.email,
+    password,
+  })
+
+  return {
+    data: result.data ? { user: result.data.user, session: result.data.session } : null,
+    error: result.error,
+  }
 }
 
 /**
