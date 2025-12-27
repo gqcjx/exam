@@ -84,19 +84,24 @@ export async function getPaperList(params?: {
     }
   }
 
-  return (data || []).map((item: any) => ({
-    id: item.id,
-    title: item.title,
-    subject: item.subject,
-    grade: item.grade,
-    duration_minutes: item.duration_minutes,
-    total_score: item.total_score,
-    published: item.published,
-    created_by: item.created_by,
-    created_at: item.created_at,
-    question_count: Array.isArray(item.paper_questions) ? item.paper_questions.length : 0,
-    submission_count: submissionCounts.get(item.id) || 0,
-  }))
+  return (data || [])
+    .filter((item: any) => {
+      // 过滤掉没有 id 或 title 的记录
+      return item && item.id && item.title
+    })
+    .map((item: any) => ({
+      id: item.id || '',
+      title: item.title || '未命名试卷',
+      subject: item.subject || null,
+      grade: item.grade || null,
+      duration_minutes: item.duration_minutes || 0,
+      total_score: item.total_score || 0,
+      published: item.published || false,
+      created_by: item.created_by || null,
+      created_at: item.created_at || new Date().toISOString(),
+      question_count: Array.isArray(item.paper_questions) ? item.paper_questions.length : 0,
+      submission_count: submissionCounts.get(item.id) || 0,
+    }))
 }
 
 // 更新试卷（发布/下线、编辑）
@@ -585,7 +590,7 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     published_papers: publishedPapers,
     total_submissions: totalSubmissions,
     pending_gradings: pendingCount || 0,
-    recent_papers: recentPapers.slice(0, 5),
+    recent_papers: (recentPapers || []).slice(0, 5).filter((p) => p && p.id && p.title),
   }
 }
 

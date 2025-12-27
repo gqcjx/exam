@@ -70,14 +70,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(true)
       const { data, error } = await supabase
         .from('profiles')
-        .select('user_id,name,role,grade,class,disabled')
+        .select('user_id,name,role,grade,class,disabled,school_id')
         .eq('user_id', session.user.id)
         .single()
       if (error) {
         console.warn('获取 profile 失败', error.message)
         setProfile(null)
       } else {
-        setProfile(data as Profile)
+        // 确保返回的数据结构完整
+        const profileData: Profile = {
+          user_id: data?.user_id || session.user.id,
+          name: data?.name || null,
+          role: (data?.role as Role) || null,
+          grade: data?.grade || null,
+          class: data?.class || null,
+          disabled: data?.disabled || false,
+          school_id: data?.school_id || null,
+        }
+        setProfile(profileData)
       }
       setLoading(false)
     }

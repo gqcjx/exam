@@ -24,7 +24,19 @@ export function UserMenu() {
     }
   }, [isOpen])
 
-  if (!session || !profile) return null
+  if (!session) return null
+  
+  // 确保 profile 存在且有效
+  if (!profile) {
+    return (
+      <div className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700">
+        <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-xs font-semibold">
+          {session.user.email?.[0]?.toUpperCase() || 'U'}
+        </div>
+        <span className="hidden sm:inline">{session.user.email || '用户'}</span>
+      </div>
+    )
+  }
 
   const roleNames: Record<string, string> = {
     student: '学生',
@@ -34,6 +46,9 @@ export function UserMenu() {
   }
 
   const roleName = roleNames[profile.role || ''] || '用户'
+  
+  // 安全地获取名称
+  const displayName = profile?.name || session?.user?.email || '用户'
 
   return (
     <div className="relative" ref={menuRef}>
@@ -42,9 +57,9 @@ export function UserMenu() {
         className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 transition-colors hover:bg-slate-100 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
       >
         <div className="flex h-8 w-8 items-center justify-center rounded-full bg-brand-100 text-brand-700 text-xs font-semibold">
-          {profile.name?.[0]?.toUpperCase() || session.user.email?.[0]?.toUpperCase() || 'U'}
+          {displayName?.[0]?.toUpperCase() || 'U'}
         </div>
-        <span className="hidden sm:inline">{profile.name || session.user.email || '用户'}</span>
+        <span className="hidden sm:inline">{displayName}</span>
         <svg
           className={`h-4 w-4 text-slate-500 transition-transform ${isOpen ? 'rotate-180' : ''}`}
           fill="none"
@@ -58,8 +73,8 @@ export function UserMenu() {
       {isOpen && (
         <div className="absolute right-0 mt-2 w-56 rounded-lg bg-white shadow-lg ring-1 ring-slate-200 py-1 z-50">
           <div className="px-4 py-3 border-b border-slate-200">
-            <p className="text-sm font-medium text-slate-900">{profile.name || '未命名用户'}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{session.user.email}</p>
+            <p className="text-sm font-medium text-slate-900">{displayName}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{session.user.email || '未知邮箱'}</p>
             <p className="text-xs text-slate-500 mt-1">{roleName}</p>
           </div>
           
