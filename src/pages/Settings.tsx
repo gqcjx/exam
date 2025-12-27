@@ -241,33 +241,25 @@ export default function Settings() {
         throw new Error(profileError.message)
       }
 
-      // 更新 auth.users 的手机号（学生不需要）
-      // 触发器会自动同步到 profiles.phone（会将 +86xxx 转换为 xxx）
+      // 更新手机号（学生不需要）
+      // 注意：直接更新 profiles.phone，不更新 auth.users.phone，避免触发 SMS 验证
+      // 因为登录逻辑只依赖 profiles.phone，所以不需要同步到 auth.users.phone
       if (profile?.role !== 'student') {
         if (cleanedPhone) {
-          // 先清空旧手机号，避免触发器更新时的唯一约束冲突
-          const { error: clearOldPhoneError } = await supabase
+          // 直接更新 profiles.phone（11位数字格式）
+          const { error: phoneError } = await supabase
             .from('profiles')
-            .update({ phone: null })
+            .update({ phone: cleanedPhone })
             .eq('user_id', session.user.id)
           
-          // 忽略清空错误（可能已经是 null）
-          if (clearOldPhoneError) {
-            console.warn('清空旧手机号时出现错误（可忽略）', clearOldPhoneError.message)
-          }
-
-          // 等待一小段时间，确保清空操作完成
-          await new Promise(resolve => setTimeout(resolve, 100))
-
-          // 更新 auth.users.phone，触发器会自动同步到 profiles.phone
-          const { error: authError } = await supabase.auth.updateUser({
-            phone: `+86${cleanedPhone}`,
-          })
-          if (authError) {
-            throw new Error(authError.message)
+          if (phoneError) {
+            if (phoneError.message.includes('duplicate key') || phoneError.message.includes('unique constraint')) {
+              throw new Error('该手机号已被其他用户使用，请使用其他手机号')
+            }
+            throw new Error(phoneError.message)
           }
         } else {
-          // 如果清空手机号，确保 profiles.phone 也为 null
+          // 如果清空手机号
           const { error: clearPhoneError } = await supabase
             .from('profiles')
             .update({ phone: null })
