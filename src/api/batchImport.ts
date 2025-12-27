@@ -37,124 +37,186 @@ export interface StudentImportRow {
   class_id?: string
 }
 
-// 解析学校、年级、班级名称到ID
-async function resolveSchoolGradeClass(
-  schoolName?: string,
-  gradeName?: string,
-  className?: string,
-): Promise<{ school_id: string | null; grade_id: string | null; class_id: string | null }> {
-  let school_id: string | null = null
-  let grade_id: string | null = null
-  let class_id: string | null = null
-
-  if (schoolName) {
-    const schools = await getSchools()
-    const school = schools.find((s) => s.name === schoolName.trim())
-    if (school) {
-      school_id = school.id
+// 批量解析学校、年级、班级名称到ID（优化版本：使用缓存）
+function resolveSchoolGradeClassBatch(
+  students: StudentImportRow[],
+  schoolsMap: Map<string, string>, // name -> id
+  gradesMap: Map<string, string>, // name -> id
+  classesMap: Map<string, string>, // "school_id:grade_id:name" -> id
+): void {
+  for (const student of students) {
+    if (student.school_id && student.grade_id && student.class_id) {
+      // 已经解析过了，跳过
+      continue
     }
-  }
 
-  if (gradeName && school_id) {
-    const grades = await getGrades()
-    const grade = grades.find((g) => g.name === gradeName.trim())
-    if (grade) {
-      grade_id = grade.id
+    let school_id = student.school_id || null
+    let grade_id = student.grade_id || null
+    let class_id = student.class_id || null
+
+    if (student.school && !school_id) {
+      const schoolName = student.school.trim()
+      school_id = schoolsMap.get(schoolName) || null
     }
-  }
 
-  if (className && school_id && grade_id) {
-    const classes = await getClasses(school_id, grade_id)
-    const classItem = classes.find((c) => c.name === className.trim())
-    if (classItem) {
-      class_id = classItem.id
+    if (student.grade && !grade_id) {
+      const gradeName = student.grade.trim()
+      grade_id = gradesMap.get(gradeName) || null
     }
-  }
 
-  return { school_id, grade_id, class_id }
+    if (student.class && school_id && grade_id && !class_id) {
+      const className = student.class.trim()
+      const classKey = `${school_id}:${grade_id}:${className}`
+      class_id = classesMap.get(classKey) || null
+    }
+
+    student.school_id = school_id || undefined
+    student.grade_id = grade_id || undefined
+    student.class_id = class_id || undefined
+  }
 }
 
-// 检查学生是否已存在（通过邮箱或手机号）
-async function checkStudentExists(email?: string, phone?: string): Promise<boolean> {
-  if (!email && !phone) return false
-
-  // 检查邮箱：通过 RPC 函数或直接查询 auth.users（需要管理员权限）
-  if (email) {
-    // 使用 RPC 函数查找用户（如果存在）
-    // 或者直接通过 profiles 表查找，然后验证邮箱
-    const { data: profiles } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .eq('role', 'student')
-      .limit(100) // 限制查询数量
-
-    if (profiles && profiles.length > 0) {
-      // 批量检查邮箱
-      for (const profile of profiles) {
-        try {
-          const { data: authData } = await supabase.auth.admin.getUserById(profile.user_id)
-          if (authData?.user?.email === email) return true
-        } catch {
-          // 忽略错误，继续检查
-        }
+// 批量检查学生是否已存在（优化版本：一次性查询所有邮箱和手机号）
+async function checkStudentsExistsBatch(
+  students: StudentImportRow[],
+): Promise<Set<string>> {
+  // 收集所有需要检查的邮箱和手机号
+  const emails = new Set<string>()
+  const phones = new Set<string>()
+  
+  for (const student of students) {
+    if (student.email) {
+      emails.add(student.email.trim().toLowerCase())
+    }
+    if (student.phone) {
+      const cleanedPhone = student.phone.replace(/\D/g, '')
+      if (cleanedPhone.length === 11) {
+        phones.add(cleanedPhone)
       }
     }
   }
 
-  // 检查手机号（通过 profiles 表）
-  if (phone) {
-    const cleanedPhone = phone.replace(/\D/g, '')
-    // 检查标准格式和 +86 格式
-    const phoneVariants = [
-      cleanedPhone,
-      `+86${cleanedPhone}`,
-      cleanedPhone.startsWith('86') ? cleanedPhone.substring(2) : `86${cleanedPhone}`
-    ]
-    
-    for (const phoneVariant of phoneVariants) {
+  const existingSet = new Set<string>() // 存储已存在的标识（email 或 phone）
+
+  // 批量查询邮箱（通过 profiles.email）
+  if (emails.size > 0) {
+    const emailArray = Array.from(emails)
+    // 分批查询，每批最多100个
+    for (let i = 0; i < emailArray.length; i += 100) {
+      const batch = emailArray.slice(i, i + 100)
       const { data } = await supabase
         .from('profiles')
-        .select('user_id')
+        .select('email')
         .eq('role', 'student')
-        .or(`phone.eq.${phoneVariant}`)
-        .limit(1)
-        .maybeSingle()
-
-      if (data) return true
+        .in('email', batch)
+      
+      if (data) {
+        data.forEach(p => {
+          if (p.email) {
+            existingSet.add(p.email.toLowerCase())
+          }
+        })
+      }
     }
   }
 
-  return false
+  // 批量查询手机号
+  if (phones.size > 0) {
+    const phoneArray = Array.from(phones)
+    // 分批查询，每批最多100个
+    for (let i = 0; i < phoneArray.length; i += 100) {
+      const batch = phoneArray.slice(i, i + 100)
+      const { data } = await supabase
+        .from('profiles')
+        .select('phone')
+        .eq('role', 'student')
+        .in('phone', batch)
+      
+      if (data) {
+        data.forEach(p => {
+          if (p.phone) {
+            existingSet.add(p.phone)
+          }
+        })
+      }
+    }
+  }
+
+  return existingSet
+}
+
+// 批量加载所有相关班级的学生姓名（优化版本）
+async function loadClassNamesBatch(classIds: Set<string>): Promise<Map<string, Set<string>>> {
+  const classNamesMap = new Map<string, Set<string>>() // class_id -> Set<name>
+
+  if (classIds.size === 0) {
+    return classNamesMap
+  }
+
+  const classIdArray = Array.from(classIds)
+  // 分批查询，每批最多100个班级
+  for (let i = 0; i < classIdArray.length; i += 100) {
+    const batch = classIdArray.slice(i, i + 100)
+    const { data } = await supabase
+      .from('profiles')
+      .select('class_id, name')
+      .eq('role', 'student')
+      .in('class_id', batch)
+      .not('name', 'is', null)
+
+    if (data) {
+      data.forEach(s => {
+        if (s.class_id && s.name) {
+          const names = classNamesMap.get(s.class_id) || new Set<string>()
+          names.add(s.name)
+          classNamesMap.set(s.class_id, names)
+        }
+      })
+    }
+  }
+
+  return classNamesMap
 }
 
 // 处理同名学生：在同班同名的情况下，添加后缀（A, AA, AAA...）
-// 同时考虑数据库中已存在的和本次导入批次中已处理的
-async function handleDuplicateName(
+// 优化版本：使用预加载的班级姓名数据
+function handleDuplicateNameBatch(
   name: string,
   class_id: string | null,
+  classNamesMap: Map<string, Set<string>>, // 预加载的班级姓名数据
   currentBatchNames: Map<string, Set<string>>, // 本次导入批次中已使用的姓名（按班级分组）
-): Promise<string> {
-  if (!class_id) return name
+): string {
+  if (!class_id) {
+    // 如果没有班级，也记录到批次中（使用空字符串作为key）
+    const batchNames = currentBatchNames.get('') || new Set<string>()
+    if (batchNames.has(name)) {
+      const suffixPattern = /^(.+?)(A+)$/
+      let maxSuffixLength = 0
+      for (const existingName of batchNames) {
+        if (existingName === name) {
+          maxSuffixLength = Math.max(maxSuffixLength, 0)
+        } else {
+          const match = existingName.match(suffixPattern)
+          if (match && match[1] === name) {
+            maxSuffixLength = Math.max(maxSuffixLength, match[2].length)
+          }
+        }
+      }
+      const newSuffix = 'A'.repeat(maxSuffixLength + 1)
+      name = `${name}${newSuffix}`
+    }
+    batchNames.add(name)
+    currentBatchNames.set('', batchNames)
+    return name
+  }
 
   const baseName = name.trim()
-  
-  // 获取数据库中同班所有学生姓名
-  const { data: existingStudents } = await supabase
-    .from('profiles')
-    .select('name')
-    .eq('role', 'student')
-    .eq('class_id', class_id)
-    .not('name', 'is', null)
-
   const allNames = new Set<string>()
   
   // 添加数据库中已存在的姓名
-  if (existingStudents) {
-    existingStudents.forEach(s => {
-      if (s.name) {
-        allNames.add(s.name)
-      }
-    })
+  const existingNames = classNamesMap.get(class_id)
+  if (existingNames) {
+    existingNames.forEach(n => allNames.add(n))
   }
 
   // 添加本次导入批次中已使用的姓名（同一班级）
@@ -254,30 +316,80 @@ export async function batchImportStudents(
     }
   }
 
+  // ========== 性能优化：批量预加载数据 ==========
+  
+  // 1. 预加载所有配置数据（学校、年级、班级）
+  console.log('开始预加载配置数据...')
+  const [schools, grades, allClasses] = await Promise.all([
+    getSchools(false), // 获取所有学校（包括禁用的）
+    getGrades(false), // 获取所有年级（包括禁用的）
+    getClasses(undefined, undefined, false), // 获取所有班级（包括禁用的）
+  ])
+
+  // 构建查找映射
+  const schoolsMap = new Map<string, string>() // name -> id
+  schools.forEach(s => schoolsMap.set(s.name.trim(), s.id))
+
+  const gradesMap = new Map<string, string>() // name -> id
+  grades.forEach(g => gradesMap.set(g.name.trim(), g.id))
+
+  const classesMap = new Map<string, string>() // "school_id:grade_id:name" -> id
+  allClasses.forEach(c => {
+    const key = `${c.school_id}:${c.grade_id}:${c.name.trim()}`
+    classesMap.set(key, c.id)
+  })
+
+  // 2. 批量解析学校、年级、班级
+  console.log('批量解析学校、年级、班级...')
+  resolveSchoolGradeClassBatch(students, schoolsMap, gradesMap, classesMap)
+
+  // 3. 批量检查已存在的学生
+  console.log('批量检查已存在的学生...')
+  const existingSet = await checkStudentsExistsBatch(students)
+
+  // 4. 收集所有需要查询的班级ID
+  const classIds = new Set<string>()
+  students.forEach(s => {
+    if (s.class_id) {
+      classIds.add(s.class_id)
+    }
+  })
+
+  // 5. 批量加载所有相关班级的学生姓名
+  console.log('批量加载班级学生姓名...')
+  const classNamesMap = await loadClassNamesBatch(classIds)
+
+  // ========== 开始处理每个学生 ==========
+  
   // 用于跟踪本次导入批次中已使用的姓名（按班级分组）
   const currentBatchNames = new Map<string, Set<string>>()
 
+  // 准备创建用户的任务列表
+  interface CreateUserTask {
+    student: StudentImportRow
+    email: string
+    finalName: string
+    school_id: string | null
+    grade_id: string | null
+    class_id: string | null
+  }
+
+  const createUserTasks: CreateUserTask[] = []
   let processedCount = 0
+
   for (const student of students) {
     processedCount++
     // 更新进度
     if (onProgress) {
       onProgress(processedCount, students.length)
     }
+
     try {
-      // 解析学校、年级、班级
       let school_id = student.school_id || null
       let grade_id = student.grade_id || null
       let class_id = student.class_id || null
 
-      if (student.school || student.grade || student.class) {
-        const resolved = await resolveSchoolGradeClass(student.school, student.grade, student.class)
-        school_id = resolved.school_id || school_id
-        grade_id = resolved.grade_id || grade_id
-        class_id = resolved.class_id || class_id
-      }
-
-      // 如果是班主任，只能导入自己管理的班级的学生
+      // 权限检查：如果是班主任，只能导入自己管理的班级的学生
       if (currentUserRole === 'teacher' && currentUserClassIds && currentUserClassIds.length > 0) {
         if (!class_id || !currentUserClassIds.includes(class_id)) {
           failed++
@@ -286,7 +398,7 @@ export async function batchImportStudents(
         }
       }
 
-      // 如果是教师（非管理员），只能导入自己学校的学生
+      // 权限检查：如果是教师（非管理员），只能导入自己学校的学生
       if (currentUserRole === 'teacher' && currentUserSchoolId) {
         if (!school_id || school_id !== currentUserSchoolId) {
           failed++
@@ -296,7 +408,11 @@ export async function batchImportStudents(
       }
 
       // 检查学生是否已存在（通过邮箱或手机号），如果存在则跳过
-      const exists = await checkStudentExists(student.email, student.phone)
+      const studentEmail = student.email?.trim().toLowerCase()
+      const studentPhone = student.phone ? student.phone.replace(/\D/g, '') : null
+      const exists = (studentEmail && existingSet.has(studentEmail)) || 
+                     (studentPhone && existingSet.has(studentPhone))
+      
       if (exists) {
         failed++
         errors.push(`${student.name}: 学生已存在（邮箱或手机号重复），已跳过`)
@@ -305,42 +421,16 @@ export async function batchImportStudents(
 
       // 处理同名：同班同名时添加后缀
       let finalName = student.name.trim()
-      if (class_id) {
-        finalName = await handleDuplicateName(finalName, class_id, currentBatchNames)
-      } else {
-        // 如果没有班级，也记录到批次中（使用空字符串作为key）
-        const batchNames = currentBatchNames.get('') || new Set<string>()
-        if (batchNames.has(finalName)) {
-          // 即使没有班级，如果本次导入中有同名，也需要添加后缀
-          const suffixPattern = /^(.+?)(A+)$/
-          let maxSuffixLength = 0
-          for (const name of batchNames) {
-            if (name === finalName) {
-              maxSuffixLength = Math.max(maxSuffixLength, 0)
-            } else {
-              const match = name.match(suffixPattern)
-              if (match && match[1] === finalName) {
-                maxSuffixLength = Math.max(maxSuffixLength, match[2].length)
-              }
-            }
-          }
-          const newSuffix = 'A'.repeat(maxSuffixLength + 1)
-          finalName = `${finalName}${newSuffix}`
-        }
-        batchNames.add(finalName)
-        currentBatchNames.set('', batchNames)
-      }
-
-      // 生成邮箱（如果没有提供邮箱）
-      // 使用 gqc@gfce.com 作为基础邮箱，添加唯一后缀避免重复
-      const email = student.email || `gqc+${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@gfce.com`
-
-      // 验证必需字段
-      if (!finalName || !finalName.trim()) {
+      if (!finalName) {
         failed++
         errors.push(`${student.name}: 姓名为空`)
         continue
       }
+
+      finalName = handleDuplicateNameBatch(finalName, class_id, classNamesMap, currentBatchNames)
+
+      // 生成邮箱（如果没有提供邮箱）
+      const email = student.email || `gqc+${Date.now()}_${processedCount}_${Math.random().toString(36).substring(2, 9)}@gfce.com`
 
       if (!email || !email.trim()) {
         failed++
@@ -348,34 +438,71 @@ export async function batchImportStudents(
         continue
       }
 
-      // 通过 Edge Function 创建用户（使用 service role key）
+      // 添加到创建任务列表
+      createUserTasks.push({
+        student,
+        email: email.trim(),
+        finalName: finalName.trim(),
+        school_id,
+        grade_id,
+        class_id,
+      })
+
+    } catch (err: any) {
+      failed++
+      errors.push(`${student.name}: ${err?.message || '预处理失败'}`)
+      console.error(`Error preprocessing student ${student.name}:`, err)
+    }
+  }
+
+  // ========== 并发创建用户（限制并发数为5） ==========
+  console.log(`开始创建 ${createUserTasks.length} 个用户...`)
+  const CONCURRENT_LIMIT = 5
+  let taskIndex = 0
+
+  const createUserPromises: Promise<void>[] = []
+  
+  for (let i = 0; i < CONCURRENT_LIMIT && i < createUserTasks.length; i++) {
+    createUserPromises.push(processCreateUserQueue())
+  }
+
+  async function processCreateUserQueue() {
+    while (taskIndex < createUserTasks.length) {
+      const currentIndex = taskIndex++
+      const task = createUserTasks[currentIndex]
+      
+      // 更新进度
+      if (onProgress) {
+        onProgress(processedCount - createUserTasks.length + currentIndex + 1, students.length)
+      }
+
       try {
         const { data: createUserData, error: createUserError } = await supabase.functions.invoke('create-student', {
           body: {
-            email: email.trim(),
-            password: student.password || '123456',
-            phone: student.phone ? student.phone.replace(/\D/g, '') : null,
-            name: finalName.trim(),
-            nickname: student.nickname?.trim() || null,
-            school_id: school_id || null,
-            grade_id: grade_id || null,
-            class_id: class_id || null,
+            email: task.email,
+            password: task.student.password || '123456',
+            phone: task.student.phone ? task.student.phone.replace(/\D/g, '') : null,
+            name: task.finalName,
+            nickname: task.student.nickname?.trim() || null,
+            school_id: task.school_id,
+            grade_id: task.grade_id,
+            class_id: task.class_id,
           },
         })
 
         if (createUserError) {
           failed++
           const errorMsg = createUserError.message || '创建账号失败'
-          errors.push(`${student.name}: ${errorMsg}`)
-          console.error(`Failed to create student ${student.name}:`, createUserError)
+          errors.push(`${task.student.name}: ${errorMsg}`)
+          console.error(`Failed to create student ${task.student.name}:`, createUserError)
           continue
         }
 
         if (!createUserData || !createUserData.success) {
           failed++
           const errorMsg = createUserData?.error || '创建账号失败'
-          errors.push(`${student.name}: ${errorMsg}`)
-          console.error(`Failed to create student ${student.name}:`, createUserData)
+          errors.push(`${task.student.name}: ${errorMsg}`)
+          console.error(`Failed to create student ${task.student.name}:`, createUserData)
           continue
         }
 
@@ -383,17 +510,14 @@ export async function batchImportStudents(
       } catch (invokeError: any) {
         failed++
         const errorMsg = invokeError?.message || '调用 Edge Function 失败'
-        errors.push(`${student.name}: ${errorMsg}`)
-        console.error(`Failed to invoke create-student for ${student.name}:`, invokeError)
-        continue
+        errors.push(`${task.student.name}: ${errorMsg}`)
+        console.error(`Failed to invoke create-student for ${task.student.name}:`, invokeError)
       }
-
-    } catch (err: any) {
-      failed++
-      errors.push(`${student.name}: ${err?.message || '导入失败'}`)
-      console.error(`Error importing student ${student.name}:`, err)
     }
   }
+
+  // 等待所有创建任务完成
+  await Promise.all(createUserPromises)
 
   // 更新导入历史记录
   if (importHistoryId && currentUserId) {
