@@ -11,12 +11,19 @@
       var search = window.location.search;
       var hash = window.location.hash;
       
-      // 如果路径不是 /exam/ 或 /exam/index.html，重定向到 /exam/index.html
-      if (!path.startsWith('/exam/')) {
-        window.location.replace('/exam/index.html' + search + hash);
+      // 避免循环重定向：如果已经是 index.html 或根路径，不要重定向
+      if (path === '/exam/index.html' || path === '/exam/' || path === '/exam') {
+        // 已经在正确的路径，不需要重定向
+        // 让 React Router 处理路由
+      } else if (path.startsWith('/exam/')) {
+        // 在 /exam/ 路径下但不是 index.html，重定向到根路径（React Router 会处理）
+        window.location.replace('/exam/' + search + hash);
+      } else if (path === '/' || path === '') {
+        // 在根路径，重定向到 /exam/
+        window.location.replace('/exam/' + search + hash);
       } else {
-        // 已经在 /exam/ 路径下，重定向到 index.html
-        window.location.replace('/exam/index.html' + search + hash);
+        // 其他路径，重定向到 /exam/
+        window.location.replace('/exam/' + search + hash);
       }
     </script>
   </head>

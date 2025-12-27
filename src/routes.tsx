@@ -189,6 +189,14 @@ export const router = createBrowserRouter(
     // GitHub Pages: 使用子路径 '/exam'
     basename: (() => {
       if (typeof window === 'undefined') return '/exam'
+      
+      // 如果访问的是 /exam/index.html，重定向到 /exam/
+      if (window.location.pathname === '/exam/index.html') {
+        const search = window.location.search
+        const hash = window.location.hash
+        window.history.replaceState(null, '', '/exam/' + search + hash)
+      }
+      
       // 检查是否在 Netlify 域名下，或者路径不是以 /exam 开头
       const isNetlify = window.location.hostname.includes('netlify.app') || 
                        window.location.hostname.includes('netlify.com')
