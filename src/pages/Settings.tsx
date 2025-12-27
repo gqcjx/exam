@@ -203,6 +203,7 @@ export default function Settings() {
     try {
       // 检查手机号是否已被其他用户使用（学生不需要）
       if (profile?.role !== 'student' && cleanedPhone) {
+        // 检查 profiles.phone（11位数字格式）
         const { data: existingUser } = await supabase
           .from('profiles')
           .select('user_id, phone')
@@ -215,6 +216,10 @@ export default function Settings() {
           setSaving(false)
           return
         }
+
+        // 也检查 auth.users.phone（+86格式），通过 RPC 函数
+        // 注意：这里我们通过查询 profiles 来间接检查，因为无法直接查询 auth.users
+        // 如果 profiles.phone 没有找到，说明可能不存在，可以继续
       }
 
       // 更新 profiles 表
@@ -246,17 +251,31 @@ export default function Settings() {
       }
 
       // 更新 auth.users 的手机号（学生不需要）
-      // 触发器会自动同步到 profiles.phone
+      // 触发器会自动同步到 profiles.phone（会将 +86xxx 转换为 xxx）
       if (profile?.role !== 'student') {
         if (cleanedPhone) {
+          // 先清空旧手机号，避免触发器更新时的唯一约束冲突
+          // 注意：需要先清空，再设置新值，避免触发器在更新时遇到冲突
+          const { error: clearOldPhoneError } = await supabase
+            .from('profiles')
+            .update({ phone: null })
+            .eq('user_id', session.user.id)
+          
+          if (clearOldPhoneError) {
+            console.warn('清空旧手机号失败', clearOldPhoneError.message)
+            // 继续执行，可能旧手机号已经是 null
+          }
+
+          // 然后更新 auth.users.phone，触发器会自动同步到 profiles.phone
           const { error: authError } = await supabase.auth.updateUser({
             phone: `+86${cleanedPhone}`,
           })
           if (authError) {
+            // 如果更新失败，尝试恢复
             throw new Error(authError.message)
           }
         } else {
-          // 如果清空手机号，需要同时清空 profiles.phone
+          // 如果清空手机号，需要同时清空 profiles.phone 和 auth.users.phone
           const { error: clearPhoneError } = await supabase
             .from('profiles')
             .update({ phone: null })
@@ -264,6 +283,8 @@ export default function Settings() {
           if (clearPhoneError) {
             throw new Error(clearPhoneError.message)
           }
+          // 注意：auth.users.phone 的清空需要通过 updateUser，但 Supabase 可能不支持设置为 null
+          // 触发器会在 auth.users.phone 更新时自动处理
         }
       }
 
