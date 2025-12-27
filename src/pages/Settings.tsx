@@ -274,11 +274,13 @@ export default function Settings() {
       }
 
       // 更新邮箱（需要验证，这里只更新 metadata，实际邮箱更新需要用户通过邮件确认）
-      if (email && email !== session.user.email) {
+      // 只有当用户输入了新邮箱且与当前邮箱不同时才更新
+      // 如果邮箱为空，说明用户没有输入，不更新
+      if (email && email.trim() && email !== session.user.email) {
         // 注意：Supabase 的 updateUser 更新邮箱会发送验证邮件
         // 这里我们只更新 metadata，实际邮箱更新需要用户通过邮件确认
         const { error: emailError } = await supabase.auth.updateUser({
-          email: email,
+          email: email.trim(),
         })
         if (emailError) {
           // 如果更新邮箱失败，不影响其他设置
