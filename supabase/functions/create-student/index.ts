@@ -94,7 +94,17 @@ Deno.serve(async (req) => {
       },
     });
 
-    const payload = await req.json();
+    let payload: any;
+    try {
+      payload = await req.json();
+    } catch (parseError) {
+      console.error("Failed to parse request body:", parseError);
+      return new Response(JSON.stringify({ error: "Invalid JSON in request body" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const {
       email,
       password,
@@ -106,27 +116,42 @@ Deno.serve(async (req) => {
       class_id,
     } = payload;
 
+    console.log("Received payload:", { email, name, hasPassword: !!password, phone, school_id, grade_id, class_id });
+
     if (!email || !password || !name) {
-      return new Response(JSON.stringify({ error: "Missing required fields: email, password, name" }), {
+      const missingFields = [];
+      if (!email) missingFields.push("email");
+      if (!password) missingFields.push("password");
+      if (!name) missingFields.push("name");
+      console.error("Missing required fields:", missingFields);
+      return new Response(JSON.stringify({ error: `Missing required fields: ${missingFields.join(", ")}` }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     // 创建用户
+    const phoneFormatted = phone ? `+86${phone.replace(/\D/g, "")}` : undefined;
+    console.log("Creating user with:", { email, hasPassword: !!password, phone: phoneFormatted });
+    
     const { data: authData, error: authError } = await supabase.auth.admin.createUser({
-      email,
-      password,
+      email: email.trim(),
+      password: password,
       email_confirm: true,
-      phone: phone ? `+86${phone.replace(/\D/g, "")}` : undefined,
+      phone: phoneFormatted,
     });
 
     if (authError || !authData.user) {
-      console.error("Failed to create user:", authError);
+      console.error("Failed to create user:", {
+        error: authError,
+        message: authError?.message,
+        status: authError?.status,
+        email: email,
+      });
       return new Response(
         JSON.stringify({
           error: authError?.message || "Failed to create user",
-          details: authError?.status || undefined,
+          details: authError?.status || authError?.code || undefined,
         }),
         {
           status: 400,
@@ -135,25 +160,38 @@ Deno.serve(async (req) => {
       );
     }
 
+    console.log("User created successfully:", { user_id: authData.user.id, email: authData.user.email });
+
     // 创建用户档案
-    const { error: profileError } = await supabase.from("profiles").insert({
+    const profileData = {
       user_id: authData.user.id,
-      name,
-      nickname: nickname || null,
+      name: name.trim(),
+      nickname: nickname?.trim() || null,
       role: "student",
       school_id: school_id || null,
       grade_id: grade_id || null,
       class_id: class_id || null,
-    });
+    };
+    
+    console.log("Creating profile with:", profileData);
+    
+    const { error: profileError } = await supabase.from("profiles").insert(profileData);
 
     if (profileError) {
-      console.error("Failed to create profile:", profileError);
+      console.error("Failed to create profile:", {
+        error: profileError,
+        message: profileError.message,
+        code: profileError.code,
+        hint: profileError.hint,
+        details: profileError.details,
+        profileData: profileData,
+      });
       // 如果档案创建失败，删除已创建的用户
       await supabase.auth.admin.deleteUser(authData.user.id);
       return new Response(
         JSON.stringify({
           error: profileError.message,
-          details: profileError.code || profileError.hint || undefined,
+          details: profileError.code || profileError.hint || profileError.details || undefined,
         }),
         {
           status: 400,
@@ -161,6 +199,8 @@ Deno.serve(async (req) => {
         }
       );
     }
+
+    console.log("Profile created successfully for user:", authData.user.id);
 
     return new Response(
       JSON.stringify({
