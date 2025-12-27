@@ -201,6 +201,22 @@ export default function Settings() {
     setSaving(true)
 
     try {
+      // 检查手机号是否已被其他用户使用（学生不需要）
+      if (profile?.role !== 'student' && cleanedPhone) {
+        const { data: existingUser } = await supabase
+          .from('profiles')
+          .select('user_id, phone')
+          .eq('phone', cleanedPhone)
+          .neq('user_id', session.user.id)
+          .maybeSingle()
+
+        if (existingUser) {
+          setError('该手机号已被其他用户使用，请使用其他手机号')
+          setSaving(false)
+          return
+        }
+      }
+
       // 更新 profiles 表
       const profileUpdates: any = {
         name: realName.trim() || null,
@@ -208,9 +224,8 @@ export default function Settings() {
       }
       
       // 学生不更新手机号
-      if (profile?.role !== 'student') {
-        profileUpdates.phone = cleanedPhone || null
-      }
+      // 注意：非学生用户的手机号通过 auth.users.phone 更新，触发器会自动同步到 profiles.phone
+      // 所以这里不直接更新 profiles.phone，避免与触发器冲突
 
       if (profile?.role === 'student') {
         profileUpdates.school_id = schoolId
@@ -231,12 +246,24 @@ export default function Settings() {
       }
 
       // 更新 auth.users 的手机号（学生不需要）
-      if (profile?.role !== 'student' && cleanedPhone) {
-        const { error: authError } = await supabase.auth.updateUser({
-          phone: `+86${cleanedPhone}`,
-        })
-        if (authError) {
-          throw new Error(authError.message)
+      // 触发器会自动同步到 profiles.phone
+      if (profile?.role !== 'student') {
+        if (cleanedPhone) {
+          const { error: authError } = await supabase.auth.updateUser({
+            phone: `+86${cleanedPhone}`,
+          })
+          if (authError) {
+            throw new Error(authError.message)
+          }
+        } else {
+          // 如果清空手机号，需要同时清空 profiles.phone
+          const { error: clearPhoneError } = await supabase
+            .from('profiles')
+            .update({ phone: null })
+            .eq('user_id', session.user.id)
+          if (clearPhoneError) {
+            throw new Error(clearPhoneError.message)
+          }
         }
       }
 
