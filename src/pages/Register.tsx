@@ -215,7 +215,6 @@ export default function Register() {
             <span className="text-2xl font-bold">QF</span>
           </div>
           <h1 className="text-2xl font-bold text-slate-900">青锋测 - 免费注册</h1>
-          <p className="mt-2 text-sm text-slate-600">现在注册，永久免费使用</p>
         </div>
 
         {/* 注册表单卡片 */}
@@ -223,7 +222,9 @@ export default function Register() {
           <form className="space-y-4" onSubmit={handleSubmit}>
             {/* 姓名或昵称 */}
             <div className="space-y-1">
-              <label className="block text-sm font-medium text-slate-700">姓名或昵称 *</label>
+              <label className="block text-sm font-medium text-slate-700">
+                <span className="text-brand-600 font-semibold">现在注册，永久免费使用</span>
+              </label>
               <input
                 type="text"
                 placeholder="请输入您的姓名或昵称"

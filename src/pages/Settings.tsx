@@ -12,7 +12,8 @@ export default function Settings() {
   const [success, setSuccess] = useState<string | null>(null)
 
   // 基本信息
-  const [name, setName] = useState('')
+  const [realName, setRealName] = useState('')
+  const [nickname, setNickname] = useState('')
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
 
@@ -56,12 +57,13 @@ export default function Settings() {
       // 加载用户信息
       const { data: profileData } = await supabase
         .from('profiles')
-        .select('name, phone, school_id, grade_id, class_id, subject_ids, role')
+        .select('name, nickname, phone, school_id, grade_id, class_id, subject_ids, role')
         .eq('user_id', session!.user.id)
         .single()
 
       if (profileData) {
-        setName(profileData.name || '')
+        setRealName(profileData.name || '')
+        setNickname(profileData.nickname || '')
         // 学生不加载手机号
         if (profileData.role !== 'student') {
           setPhone(profileData.phone ? formatPhone(profileData.phone) : '')
@@ -157,6 +159,12 @@ export default function Settings() {
       return
     }
 
+    // 验证真实姓名（必填）
+    if (!realName.trim()) {
+      setError('请输入真实姓名')
+      return
+    }
+
     // 验证手机号（学生不需要）
     const cleanedPhone = profile?.role !== 'student' ? cleanPhone(phone) : ''
     if (profile?.role !== 'student' && phone && !isValidPhone(cleanedPhone)) {
@@ -195,7 +203,8 @@ export default function Settings() {
     try {
       // 更新 profiles 表
       const profileUpdates: any = {
-        name: name.trim() || null,
+        name: realName.trim() || null,
+        nickname: nickname.trim() || null,
       }
       
       // 学生不更新手机号
@@ -284,51 +293,61 @@ export default function Settings() {
       <form className="space-y-6" onSubmit={handleSubmit}>
         {/* 基本信息 */}
         <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
-          <div className="flex items-center gap-2 mb-6">
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-            <h2 className="text-lg font-semibold text-slate-900 px-3">基本信息</h2>
-            <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-          </div>
+          <h2 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">基本信息</h2>
           
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">姓名或昵称 *</label>
-              <input
-                type="text"
-                placeholder="请输入您的姓名或昵称"
-                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                required
-              />
+          <div className="space-y-5">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  姓名 <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="请输入真实姓名"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
+                  value={realName}
+                  onChange={(e) => setRealName(e.target.value)}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">昵称</label>
+                <input
+                  type="text"
+                  placeholder="请输入昵称（可选）"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
+                  value={nickname}
+                  onChange={(e) => setNickname(e.target.value)}
+                />
+              </div>
             </div>
 
             {/* 学生不显示手机号字段 */}
             {profile?.role !== 'student' && (
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">手机号</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">手机号</label>
                 <input
                   type="tel"
                   placeholder="138 0013 8000"
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                   value={phone}
                   onChange={handlePhoneChange}
                   maxLength={13}
                 />
-                <p className="mt-1 text-xs text-slate-500">添加手机号后可以使用手机号登录</p>
+                <p className="mt-1.5 text-xs text-slate-500">添加手机号后可以使用手机号登录</p>
               </div>
             )}
 
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-1">邮箱</label>
+              <label className="block text-sm font-medium text-slate-700 mb-2">邮箱</label>
               <input
                 type="email"
                 placeholder="your@example.com"
-                className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
-              <p className="mt-1 text-xs text-slate-500">添加邮箱后可以使用邮箱登录和找回密码</p>
+              <p className="mt-1.5 text-xs text-slate-500">添加邮箱后可以使用邮箱登录和找回密码</p>
             </div>
           </div>
         </div>
@@ -336,17 +355,13 @@ export default function Settings() {
         {/* 学生设置 */}
         {profile?.role === 'student' && (
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-              <h2 className="text-lg font-semibold text-slate-900 px-3">学生信息</h2>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-            </div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">学生信息</h2>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">学校 *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">学校 <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                   value={schoolId}
                   onChange={(e) => handleSchoolChange(e.target.value)}
                   required
@@ -359,9 +374,9 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">年级 *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">年级 <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                   value={gradeId}
                   onChange={(e) => handleGradeChange(e.target.value)}
                   required
@@ -374,9 +389,9 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">班级 *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">班级 <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors disabled:bg-slate-50 disabled:text-slate-500"
                   value={classId}
                   onChange={(e) => setClassId(e.target.value)}
                   required
@@ -388,7 +403,7 @@ export default function Settings() {
                   ))}
                 </select>
                 {(!schoolId || !gradeId) && (
-                  <p className="mt-1 text-xs text-slate-500">请先选择学校和年级</p>
+                  <p className="mt-1.5 text-xs text-slate-500">请先选择学校和年级</p>
                 )}
               </div>
             </div>
@@ -398,17 +413,13 @@ export default function Settings() {
         {/* 老师设置 */}
         {profile?.role === 'teacher' && (
           <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-slate-200/50">
-            <div className="flex items-center gap-2 mb-6">
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-              <h2 className="text-lg font-semibold text-slate-900 px-3">教师信息</h2>
-              <div className="h-px flex-1 bg-gradient-to-r from-transparent via-slate-200 to-transparent"></div>
-            </div>
+            <h2 className="text-lg font-semibold text-slate-900 mb-6 pb-3 border-b border-slate-200">教师信息</h2>
             
-            <div className="space-y-4">
+            <div className="space-y-5">
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">学校 *</label>
+                <label className="block text-sm font-medium text-slate-700 mb-2">学校 <span className="text-red-500">*</span></label>
                 <select
-                  className="w-full rounded-lg border border-slate-300 px-4 py-2 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 transition-colors"
                   value={teacherSchoolId}
                   onChange={(e) => handleTeacherSchoolChange(e.target.value)}
                   required
@@ -421,10 +432,10 @@ export default function Settings() {
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-slate-700 mb-1">任教科目 *</label>
-                <div className="space-y-2">
+                <label className="block text-sm font-medium text-slate-700 mb-2">任教科目 <span className="text-red-500">*</span></label>
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-lg bg-slate-50 border border-slate-200">
                   {subjects.map(subject => (
-                    <label key={subject.id} className="flex items-center gap-2 cursor-pointer">
+                    <label key={subject.id} className="flex items-center gap-2 cursor-pointer hover:bg-white p-2 rounded transition-colors">
                       <input
                         type="checkbox"
                         checked={subjectIds.includes(subject.id)}
@@ -435,7 +446,7 @@ export default function Settings() {
                     </label>
                   ))}
                 </div>
-                <p className="mt-1 text-xs text-slate-500">请至少选择一个科目</p>
+                <p className="mt-2 text-xs text-slate-500">请至少选择一个科目</p>
               </div>
             </div>
           </div>

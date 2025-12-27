@@ -169,7 +169,6 @@ export default function Login() {
         <div className="rounded-2xl bg-white p-8 shadow-xl ring-1 ring-slate-200/60">
           <div className="mb-6">
             <h2 className="text-xl font-semibold text-slate-900">欢迎登录</h2>
-            <p className="mt-1 text-sm text-slate-500">使用姓名、昵称、邮箱或手机号和密码登录您的账户</p>
           </div>
 
           <form className="space-y-4" onSubmit={handleSubmit}>
