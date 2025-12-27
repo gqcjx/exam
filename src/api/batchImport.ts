@@ -205,6 +205,7 @@ export async function batchImportStudents(
   currentUserSchoolId?: string,
   currentUserClassIds?: string[],
   fileName?: string,
+  onProgress?: (current: number, total: number) => void,
 ): Promise<{ success: number; failed: number; errors: string[]; importHistoryId?: string }> {
   if (!isSupabaseReady) {
     throw new Error('Supabase 未配置')
@@ -256,7 +257,13 @@ export async function batchImportStudents(
   // 用于跟踪本次导入批次中已使用的姓名（按班级分组）
   const currentBatchNames = new Map<string, Set<string>>()
 
+  let processedCount = 0
   for (const student of students) {
+    processedCount++
+    // 更新进度
+    if (onProgress) {
+      onProgress(processedCount, students.length)
+    }
     try {
       // 解析学校、年级、班级
       let school_id = student.school_id || null
@@ -457,9 +464,22 @@ export function parseExcelFile(file: File): Promise<StudentImportRow[]> {
 // 生成导入模板Excel文件
 export function generateImportTemplate(): void {
   const templateData = [
-    ['姓名', '昵称', '邮箱', '手机号', '学校', '年级', '班级', '密码'],
+    // 表头
+    ['姓名*', '昵称', '邮箱', '手机号', '学校', '年级', '班级', '密码'],
+    // 示例数据
     ['张三', '小张', 'zhangsan@example.com', '13800138000', '第一中学', '高一', '1班', '123456'],
     ['李四', '小李', 'lisi@example.com', '13900139000', '第一中学', '高一', '2班', '123456'],
+    ['王五', '', 'wangwu@example.com', '', '第一中学', '高一', '1班', ''],
+    ['赵六', '小赵', '', '13700137000', '', '', '', ''],
+    // 说明行
+    ['', '', '', '', '', '', '', ''],
+    ['说明：', '', '', '', '', '', '', ''],
+    ['1. 姓名是必填项，其他字段为可选项', '', '', '', '', '', '', ''],
+    ['2. 如果Excel中没有指定学校/年级/班级，可以在导入时设置默认值', '', '', '', '', '', '', ''],
+    ['3. 如果Excel中没有指定密码，将使用默认密码', '', '', '', '', '', '', ''],
+    ['4. 已存在的学生（通过邮箱或手机号判断）将被跳过', '', '', '', '', '', '', ''],
+    ['5. 同班同名将自动添加后缀（A, AA, AAA...）', '', '', '', '', '', '', ''],
+    ['6. 单次导入数量不能超过 6000 条', '', '', '', '', '', '', ''],
   ]
 
   const worksheet = XLSX.utils.aoa_to_sheet(templateData)
@@ -468,15 +488,42 @@ export function generateImportTemplate(): void {
 
   // 设置列宽
   worksheet['!cols'] = [
-    { wch: 10 }, // 姓名
-    { wch: 10 }, // 昵称
-    { wch: 25 }, // 邮箱
+    { wch: 12 }, // 姓名
+    { wch: 12 }, // 昵称
+    { wch: 30 }, // 邮箱
     { wch: 15 }, // 手机号
-    { wch: 15 }, // 学校
-    { wch: 10 }, // 年级
-    { wch: 10 }, // 班级
-    { wch: 10 }, // 密码
+    { wch: 18 }, // 学校
+    { wch: 12 }, // 年级
+    { wch: 12 }, // 班级
+    { wch: 12 }, // 密码
   ]
+
+  // 设置第一行为表头样式（通过设置单元格样式）
+  const headerRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:H1')
+  for (let col = headerRange.s.c; col <= headerRange.e.c; col++) {
+    const cellAddress = XLSX.utils.encode_cell({ r: 0, c: col })
+    if (!worksheet[cellAddress]) continue
+    worksheet[cellAddress].s = {
+      font: { bold: true, color: { rgb: 'FFFFFF' } },
+      fill: { fgColor: { rgb: '4472C4' } },
+      alignment: { horizontal: 'center', vertical: 'center' },
+    }
+  }
+
+  // 设置说明行样式
+  const noteStartRow = 5 // 从第6行开始是说明
+  const dataRange = XLSX.utils.decode_range(worksheet['!ref'] || 'A1:H10')
+  for (let row = noteStartRow; row <= dataRange.e.r; row++) {
+    for (let col = dataRange.s.c; col <= dataRange.e.c; col++) {
+      const cellAddress = XLSX.utils.encode_cell({ r: row, c: col })
+      if (worksheet[cellAddress]) {
+        worksheet[cellAddress].s = {
+          font: { color: { rgb: '666666' }, sz: 10 },
+          alignment: { horizontal: 'left', vertical: 'center' },
+        }
+      }
+    }
+  }
 
   XLSX.writeFile(workbook, '学生导入模板.xlsx')
 }

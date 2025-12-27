@@ -18,6 +18,7 @@ export type Profile = {
   grade?: string | null
   class?: string | null
   disabled?: boolean | null
+  school_id?: string | null
 }
 
 type AuthContextValue = {

@@ -13,6 +13,7 @@ export interface Profile {
   child_ids?: string[] | null
   avatar_url?: string | null
   disabled?: boolean | null
+  school_id?: string | null
 }
 
 export interface NavLinkItem {
