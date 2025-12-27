@@ -7,18 +7,18 @@ export async function bindChild(childEmail: string): Promise<void> {
     throw new Error('Supabase 未配置')
   }
 
-  // 通过邮箱查找子女 user_id
-  const { data: user, error: userError } = await supabase
-    .from('profiles')
-    .select('user_id, role')
-    .eq('email', childEmail as any) // 如果 profiles 没有 email 字段，后续可改为 Edge Function 查询 auth.users
-    .maybeSingle()
+  // 通过 RPC 函数查找学生
+  const { data: student, error: userError } = await supabase.rpc('find_student_by_email', {
+    email_text: childEmail,
+  })
 
-  if (userError || !user) {
-    throw new Error('未找到该学生账号')
+  if (userError || !student || student.length === 0) {
+    throw new Error('未找到该学生账号，请确认邮箱是否正确')
   }
 
-  if (user.role !== 'student') {
+  const studentData = student[0] as { user_id: string; name: string | null; role: string }
+
+  if (studentData.role !== 'student') {
     throw new Error('只能绑定学生账号')
   }
 
@@ -30,10 +30,14 @@ export async function bindChild(childEmail: string): Promise<void> {
 
   const { error } = await supabase.from('parent_child').insert({
     parent_id: parentId,
-    child_id: user.user_id,
+    child_id: studentData.user_id,
   })
 
   if (error) {
+    // 如果是重复绑定，给出友好提示
+    if (error.code === '23505') {
+      throw new Error('该学生已经绑定，无需重复绑定')
+    }
     throw new Error(error.message)
   }
 }

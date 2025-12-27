@@ -9,6 +9,7 @@ import AdminStats from './pages/AdminStats'
 import AdminUsers from './pages/AdminUsers'
 import AdminGrading from './pages/AdminGrading'
 import AdminConfig from './pages/AdminConfig'
+import AdminInviteCodes from './pages/AdminInviteCodes'
 import Exam from './pages/Exam'
 import Result from './pages/Result'
 import Parent from './pages/Parent'
@@ -21,6 +22,7 @@ import NotFound from './pages/NotFound'
 import Unauthorized from './pages/Unauthorized'
 import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
+import Settings from './pages/Settings'
 import { ProtectedRoute } from './components/ProtectedRoute'
 
 export const router = createBrowserRouter(
@@ -49,6 +51,14 @@ export const router = createBrowserRouter(
         element: (
           <ProtectedRoute>
             <Dashboard />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/settings',
+        element: (
+          <ProtectedRoute>
+            <Settings />
           </ProtectedRoute>
         ),
       },
@@ -97,6 +107,14 @@ export const router = createBrowserRouter(
         element: (
           <ProtectedRoute roles={['admin', 'teacher']}>
             <AdminConfig />
+          </ProtectedRoute>
+        ),
+      },
+      {
+        path: '/admin/invite-codes',
+        element: (
+          <ProtectedRoute roles={['admin']}>
+            <AdminInviteCodes />
           </ProtectedRoute>
         ),
       },
