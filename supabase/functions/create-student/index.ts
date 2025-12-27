@@ -162,7 +162,7 @@ Deno.serve(async (req) => {
 
     console.log("User created successfully:", { user_id: authData.user.id, email: authData.user.email });
 
-    // 创建用户档案
+    // 创建或更新用户档案（使用 upsert 处理已存在的情况）
     const profileData = {
       user_id: authData.user.id,
       name: name.trim(),
@@ -173,12 +173,17 @@ Deno.serve(async (req) => {
       class_id: class_id || null,
     };
     
-    console.log("Creating profile with:", profileData);
+    console.log("Creating/updating profile with:", profileData);
     
-    const { error: profileError } = await supabase.from("profiles").insert(profileData);
+    // 使用 upsert：如果 profile 已存在（可能由触发器自动创建），则更新；否则插入
+    const { error: profileError } = await supabase
+      .from("profiles")
+      .upsert(profileData, {
+        onConflict: "user_id",
+      });
 
     if (profileError) {
-      console.error("Failed to create profile:", {
+      console.error("Failed to create/update profile:", {
         error: profileError,
         message: profileError.message,
         code: profileError.code,
@@ -200,7 +205,7 @@ Deno.serve(async (req) => {
       );
     }
 
-    console.log("Profile created successfully for user:", authData.user.id);
+    console.log("Profile created/updated successfully for user:", authData.user.id);
 
     return new Response(
       JSON.stringify({
