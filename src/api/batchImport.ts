@@ -385,9 +385,9 @@ export async function batchImportStudents(
     }
 
     try {
-      let school_id = student.school_id || null
-      let grade_id = student.grade_id || null
-      let class_id = student.class_id || null
+      const school_id = student.school_id || null
+      const grade_id = student.grade_id || null
+      const class_id = student.class_id || null
 
       // 权限检查：如果是班主任，只能导入自己管理的班级的学生
       if (currentUserRole === 'teacher' && currentUserClassIds && currentUserClassIds.length > 0) {

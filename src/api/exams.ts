@@ -1,6 +1,14 @@
+/**
+ * 考试相关 API
+ * 提供试卷查询、答题、批改等功能
+ */
+
 import { supabase } from '../lib/supabaseClient'
 import { isSupabaseReady } from '../lib/env'
 import type { QuestionItem, QuestionType } from '../types'
+import { logger } from '../utils/logger'
+import { handleError, ErrorType, AppError } from '../utils/errorHandler'
+import { withRetry, withTimeout } from '../utils/async'
 
 // 试卷基本信息
 export type PaperInfo = {
@@ -44,7 +52,8 @@ export async function getAvailablePapers(): Promise<PaperInfo[]> {
     .order('created_at', { ascending: false })
 
   if (error) {
-    console.warn('获取试卷列表失败', error.message)
+    const appError = handleError(error, 'getAvailablePapers')
+    logger.warn('获取试卷列表失败', appError)
     return []
   }
 
@@ -65,7 +74,8 @@ export async function checkPaperCompleted(paperId: string, userId: string): Prom
     .limit(1)
 
   if (error) {
-    console.warn('检查完成状态失败', error.message)
+    const appError = handleError(error, 'checkPaperCompleted')
+    logger.warn('检查完成状态失败', appError)
     return false
   }
 
@@ -102,7 +112,8 @@ export async function loadPaperQuestions(paperId: string): Promise<PaperQuestion
     .order('order_no', { ascending: true })
 
   if (error) {
-    console.warn('加载试卷题目失败', error.message)
+    const appError = handleError(error, 'loadPaperQuestions')
+    logger.warn('加载试卷题目失败', appError)
     return []
   }
 
@@ -227,6 +238,16 @@ function gradeQuestion(question: QuestionItem, chosen: string | string[]): {
 }
 
 // 提交答案并自动批改
+/**
+ * 提交答案并自动批改
+ * 
+ * @param paperId 试卷ID
+ * @param userId 用户ID
+ * @param answers 答案草稿
+ * @param questionScores 题目分值映射
+ * @returns 总分和提交时间
+ * @throws AppError 当操作失败时抛出
+ */
 export async function submitAnswers(
   paperId: string,
   userId: string,
@@ -234,57 +255,81 @@ export async function submitAnswers(
   questionScores: Map<string, number> // question_id -> score
 ): Promise<{ totalScore: number; submittedAt: string }> {
   if (!isSupabaseReady) {
-    throw new Error('Supabase 未配置')
+    throw new AppError('Supabase 未配置', ErrorType.DATA, 'SUPABASE_NOT_READY')
   }
 
-  // 1. 加载试卷题目
-  const paperQuestions = await loadPaperQuestions(paperId)
-  if (paperQuestions.length === 0) {
-    throw new Error('试卷题目加载失败')
-  }
+  try {
+    return await withRetry(
+      async () => {
+        // 1. 加载试卷题目
+        const paperQuestions = await loadPaperQuestions(paperId)
+        if (paperQuestions.length === 0) {
+          throw new AppError('试卷题目加载失败', ErrorType.DATA, 'PAPER_QUESTIONS_EMPTY')
+        }
 
-  // 2. 批改并准备答案记录
-  const answerRecords = paperQuestions.map((pq) => {
-    const chosen = answers[pq.question_id] || (pq.question.type === 'multiple' ? [] : '')
-    const grading = gradeQuestion(pq.question, chosen)
-    const score = grading.status === 'auto' 
-      ? (grading.isCorrect ? (questionScores.get(pq.question_id) || pq.score) : 0)
-      : 0
+        // 2. 批改并准备答案记录
+        const answerRecords = paperQuestions.map((pq) => {
+          const chosen = answers[pq.question_id] || (pq.question.type === 'multiple' ? [] : '')
+          const grading = gradeQuestion(pq.question, chosen)
+          const score = grading.status === 'auto' 
+            ? (grading.isCorrect ? (questionScores.get(pq.question_id) || pq.score) : 0)
+            : 0
 
-    return {
-      user_id: userId,
-      paper_id: paperId,
-      question_id: pq.question_id,
-      chosen: Array.isArray(chosen) ? chosen : [chosen],
-      is_correct: grading.isCorrect,
-      score,
-      status: grading.status,
-      submitted_at: new Date().toISOString(),
-    }
-  })
+          return {
+            user_id: userId,
+            paper_id: paperId,
+            question_id: pq.question_id,
+            chosen: Array.isArray(chosen) ? chosen : [chosen],
+            is_correct: grading.isCorrect,
+            score,
+            status: grading.status,
+            submitted_at: new Date().toISOString(),
+          }
+        })
 
-  // 3. 批量插入答案记录
-  const { error: insertError } = await supabase.from('answers').upsert(answerRecords, {
-    onConflict: 'user_id,paper_id,question_id',
-  })
+        // 3. 批量插入答案记录
+        const { error: insertError } = await supabase.from('answers').upsert(answerRecords, {
+          onConflict: 'user_id,paper_id,question_id',
+        })
 
-  if (insertError) {
-    throw new Error(`提交答案失败: ${insertError.message}`)
-  }
+        if (insertError) {
+          throw new AppError(
+            `提交答案失败: ${insertError.message}`,
+            ErrorType.DATA,
+            'SUBMIT_ANSWERS_FAILED',
+            insertError
+          )
+        }
 
-  // 4. 删除草稿
-  await supabase
-    .from('answers_draft')
-    .delete()
-    .eq('user_id', userId)
-    .eq('paper_id', paperId)
+        // 4. 删除草稿
+        const { error: deleteError } = await supabase
+          .from('answers_draft')
+          .delete()
+          .eq('user_id', userId)
+          .eq('paper_id', paperId)
 
-  // 5. 计算总分
-  const totalScore = answerRecords.reduce((sum, r) => sum + r.score, 0)
+        if (deleteError) {
+          // 草稿删除失败不影响提交，只记录警告
+          logger.warn('删除答题草稿失败', deleteError)
+        }
 
-  return {
-    totalScore,
-    submittedAt: answerRecords[0].submitted_at,
+        // 5. 计算总分
+        const totalScore = answerRecords.reduce((sum, r) => sum + r.score, 0)
+
+        return {
+          totalScore,
+          submittedAt: answerRecords[0].submitted_at,
+        }
+      },
+      {
+        maxRetries: 2,
+        delay: 1000,
+      }
+    )
+  } catch (error) {
+    const appError = handleError(error, 'submitAnswers')
+    logger.error('提交答案失败', appError)
+    throw appError
   }
 }
 

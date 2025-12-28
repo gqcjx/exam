@@ -61,7 +61,7 @@ export async function getPaperList(params?: {
   }
 
   // 获取每个试卷的提交数量
-  const paperIds = (data || []).map((p: any) => p.id)
+  const paperIds = (data || []).map((p) => p.id)
   const submissionCounts = new Map<string, number>()
 
   if (paperIds.length > 0) {
@@ -71,34 +71,31 @@ export async function getPaperList(params?: {
       .in('paper_id', paperIds)
 
     if (submissions) {
-      const uniqueSubmissions = new Map<string, Set<string>>()
-      submissions.forEach((s: any) => {
-        if (!uniqueSubmissions.has(s.paper_id)) {
-          uniqueSubmissions.set(s.paper_id, new Set())
+      const uniqueSubmissionsPerPaper = new Map<string, Set<string>>()
+      submissions.forEach((s) => {
+        if (!uniqueSubmissionsPerPaper.has(s.paper_id)) {
+          uniqueSubmissionsPerPaper.set(s.paper_id, new Set())
         }
-        uniqueSubmissions.get(s.paper_id)!.add(s.user_id)
+        uniqueSubmissionsPerPaper.get(s.paper_id)!.add(s.user_id)
       })
-      uniqueSubmissions.forEach((userIds, paperId) => {
+      uniqueSubmissionsPerPaper.forEach((userIds, paperId) => {
         submissionCounts.set(paperId, userIds.size)
       })
     }
   }
 
   return (data || [])
-    .filter((item: any) => {
-      // 过滤掉没有 id 或 title 的记录
-      return item && item.id && item.title
-    })
-    .map((item: any) => ({
-      id: item.id || '',
-      title: item.title || '未命名试卷',
-      subject: item.subject || null,
-      grade: item.grade || null,
+    .filter((item) => item && item.id && item.title)
+    .map((item) => ({
+      id: item.id,
+      title: item.title,
+      subject: item.subject,
+      grade: item.grade,
       duration_minutes: item.duration_minutes || 0,
       total_score: item.total_score || 0,
       published: item.published || false,
-      created_by: item.created_by || null,
-      created_at: item.created_at || new Date().toISOString(),
+      created_by: item.created_by,
+      created_at: item.created_at,
       question_count: Array.isArray(item.paper_questions) ? item.paper_questions.length : 0,
       submission_count: submissionCounts.get(item.id) || 0,
     }))
@@ -241,7 +238,7 @@ export async function deletePaper(paperId: string): Promise<void> {
 
   // 先删除关联的 paper_questions
   await supabase.from('paper_questions').delete().eq('paper_id', paperId)
-  
+
   // 再删除试卷
   const { error } = await supabase.from('papers').delete().eq('id', paperId)
 
@@ -309,83 +306,69 @@ export async function getPendingGradings(params?: {
   }
 
   // 获取用户名称
-  const userIds = [...new Set((data || []).map((item: any) => item.user_id))]
+  const userIds = [...new Set((data || []).map((item) => item.user_id))]
   const userNamesMap = new Map<string, string | null>()
-  
+
   if (userIds.length > 0) {
     const { data: profiles } = await supabase
       .from('profiles')
       .select('user_id, name')
       .in('user_id', userIds)
-    
-    profiles?.forEach((p: any) => {
+
+    profiles?.forEach((p) => {
       userNamesMap.set(p.user_id, p.name)
     })
   }
 
   // 获取所有待批阅答案的 paper_questions 分数
-  const answerIds = (data || []).map((item: any) => ({
+  const answerIds = (data || []).map((item) => ({
     paper_id: item.paper_id,
     question_id: item.question_id,
   }))
-  
+
   const paperQuestionScores = new Map<string, number>()
   if (answerIds.length > 0) {
-    const uniquePairs = Array.from(
-      new Set(answerIds.map((a) => `${a.paper_id}_${a.question_id}`))
-    )
-    
     // 批量查询所有 paper_questions
     const paperIds = [...new Set(answerIds.map((a) => a.paper_id))]
     const questionIds = [...new Set(answerIds.map((a) => a.question_id))]
-    
+
     const { data: pqDataList } = await supabase
       .from('paper_questions')
       .select('paper_id, question_id, score')
       .in('paper_id', paperIds)
       .in('question_id', questionIds)
-    
+
     if (pqDataList) {
-      pqDataList.forEach((pq: any) => {
+      pqDataList.forEach((pq) => {
         const pairKey = `${pq.paper_id}_${pq.question_id}`
         paperQuestionScores.set(pairKey, pq.score || 10)
       })
     }
-    
-    // 为没有找到的 pair 设置默认值
-    uniquePairs.forEach((pair) => {
-      if (!paperQuestionScores.has(pair)) {
-        paperQuestionScores.set(pair, 10) // 默认分数
-      }
-    })
   }
 
   return (data || [])
-    .filter((item: any) => {
-      // 过滤掉没有 questions 或 papers 数据的记录
-      return item.questions && item.papers
-    })
+    .filter((item: any) => item.questions && item.papers)
     .map((item: any) => {
       const pairKey = `${item.paper_id}_${item.question_id}`
       const maxScore = paperQuestionScores.get(pairKey) || 10
-      
-      // 确保 question 对象有必要的字段
+
+      const q = item.questions
       const question: QuestionItem = {
-        id: item.questions.id || item.question_id,
-        subject: item.questions.subject || '',
-        grade: item.questions.grade || null,
-        semester: item.questions.semester || null,
-        textbook_version: item.questions.textbook_version || null,
-        difficulty: item.questions.difficulty || 1,
-        type: item.questions.type || 'short',
-        stem: item.questions.stem || '',
-        options: item.questions.options || undefined,
-        answer: item.questions.answer || [],
-        analysis: item.questions.analysis || null,
-        tags: item.questions.tags || [],
-        created_by: item.questions.created_by || null,
+        id: q.id || item.question_id,
+        subject: q.subject || '',
+        grade: q.grade || null,
+        semester: q.semester || null,
+        textbook_version: q.textbook_version || null,
+        difficulty: q.difficulty || 1,
+        type: q.type || 'short',
+        stem: q.stem || '',
+        options: q.options || undefined,
+        answer: q.answer || [],
+        analysis: q.analysis || null,
+        tags: q.tags || [],
+        created_by: q.created_by || null,
       }
-      
+
       return {
         id: item.id,
         user_id: item.user_id,
@@ -396,7 +379,7 @@ export async function getPendingGradings(params?: {
         manual_score: item.manual_score,
         status: item.status as 'pending' | 'auto' | 'graded',
         submitted_at: item.submitted_at,
-        paper_title: item.papers?.title || '',
+        paper_title: (Array.isArray(item.papers) ? item.papers[0]?.title : item.papers?.title) || '',
         question,
         user_name: userNamesMap.get(item.user_id) || null,
         max_score: maxScore,
@@ -428,7 +411,7 @@ export async function gradeShortAnswer(
   const maxScore = (answer as any).paper_questions?.score || 0
   const finalScore = Math.max(0, Math.min(manualScore, maxScore))
   const isCorrect = finalScore >= maxScore * 0.6 // 60% 以上认为正确
-  
+
   // 获取用户ID和试卷信息用于发送通知
   const { data: answerData } = await supabase
     .from('answers')
@@ -517,7 +500,7 @@ export async function getPaperStats(paperId: string): Promise<PaperStats | null>
 
   // 按用户聚合分数
   const userScores = new Map<string, number>()
-  submissions.forEach((s: any) => {
+  submissions.forEach((s) => {
     const userId = s.user_id
     const score = (s.score || 0) + (s.manual_score || 0)
     const current = userScores.get(userId) || 0
@@ -557,49 +540,35 @@ export async function getDashboardStats(): Promise<DashboardStats | null> {
     return null
   }
 
-  // 获取试卷统计
-  const { data: papers } = await supabase
-    .from('papers')
-    .select('id, published')
-  
-  const totalPapers = papers?.length || 0
-  const publishedPapers = papers?.filter((p) => p.published).length || 0
-
-  // 获取提交统计
-  const { data: submissions } = await supabase
-    .from('answers')
-    .select('id, user_id, paper_id')
-  
-  const uniqueSubmissions = new Set<string>()
-  submissions?.forEach((s: any) => {
-    uniqueSubmissions.add(`${s.user_id}-${s.paper_id}`)
-  })
-  const totalSubmissions = uniqueSubmissions.size
-
-  // 获取待批阅数量
-  const { count: pendingCount } = await supabase
-    .from('answers')
-    .select('id', { count: 'exact', head: true })
-    .eq('status', 'pending')
-
-  // 获取最近的试卷
-  let recentPapers: PaperListItem[] = []
   try {
-    const papers = await getPaperList({ published: undefined })
-    recentPapers = (papers || [])
-      .filter((p) => p && p.id && p.title)
-      .slice(0, 5)
-  } catch (error) {
-    console.warn('获取最近试卷失败', error)
-    recentPapers = []
-  }
+    const [papersResult, submissionsCountResult, pendingCountResult, recentPapersResult] = await Promise.all([
+      // 1. 获取试卷发布统计
+      supabase.from('papers').select('published'),
+      // 2. 获取总提交统计（使用 count: 'exact' 提升性能）
+      supabase.from('answers').select('*', { count: 'exact', head: true }),
+      // 3. 获取待批阅统计
+      supabase.from('answers').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
+      // 4. 获取最近试卷
+      getPaperList({ published: undefined })
+    ])
 
-  return {
-    total_papers: totalPapers || 0,
-    published_papers: publishedPapers || 0,
-    total_submissions: totalSubmissions || 0,
-    pending_gradings: pendingCount || 0,
-    recent_papers: recentPapers,
+    const papers = papersResult.data || []
+    const totalPapers = papers.length
+    const publishedPapers = papers.filter((p) => p.published).length
+    const totalSubmissions = submissionsCountResult.count || 0
+    const pendingCount = pendingCountResult.count || 0
+    const recentPapers = (recentPapersResult || []).slice(0, 5)
+
+    return {
+      total_papers: totalPapers,
+      published_papers: publishedPapers,
+      total_submissions: totalSubmissions,
+      pending_gradings: pendingCount,
+      recent_papers: recentPapers,
+    }
+  } catch (error) {
+    console.warn('获取 Dashboard 统计失败', error)
+    return null
   }
 }
 

@@ -1,3 +1,8 @@
+/**
+ * 认证上下文
+ * 提供用户认证状态和权限管理
+ */
+
 import {
   createContext,
   useContext,
@@ -8,6 +13,8 @@ import {
 } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { supabase } from '../lib/supabaseClient'
+import { logger } from '../utils/logger'
+import { handleError } from '../utils/errorHandler'
 
 export type Role = 'admin' | 'teacher' | 'student' | 'parent' | null
 
@@ -39,18 +46,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // 初始 session
     supabase.auth.getSession().then(({ data, error }) => {
       if (error) {
-        console.warn('获取 session 失败', error.message)
+        const appError = handleError(error, 'AuthContext.getSession')
+        logger.warn('获取 session 失败', appError)
         setSession(null)
         setLoading(false)
       } else {
         setSession(data.session ?? null)
         setLoading(false)
+        if (data.session) {
+          logger.debug('Session 初始化成功', { userId: data.session.user.id })
+        }
       }
     })
 
     // 监听 auth 状态变化
     const { data: listener } = supabase.auth.onAuthStateChange(async (event, newSession) => {
-      console.log('Auth state changed:', event, newSession?.user?.email)
+      logger.debug('Auth state changed', { event, userId: newSession?.user?.id })
       setSession(newSession)
       setLoading(false)
     })
@@ -74,7 +85,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .eq('user_id', session.user.id)
         .single()
       if (error) {
-        console.warn('获取 profile 失败', error.message)
+        const appError = handleError(error, 'AuthContext.fetchProfile')
+        logger.warn('获取 profile 失败', appError)
         setProfile(null)
       } else {
         // 确保返回的数据结构完整
