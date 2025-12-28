@@ -15,14 +15,24 @@
 
 # 环境变量配置
 # 需要在 Netlify 控制台 → Site settings → Build & deploy → Environment variables 中配置：
-# - VITE_SUPABASE_URL: 你的 Supabase 项目 URL
-# - VITE_SUPABASE_ANON_KEY: 你的 Supabase anon public key
-# - SUPABASE_URL: 你的 Supabase 项目 URL（用于 Netlify Functions，如果 VITE_SUPABASE_URL 未设置）
+# 
+# 重要：Netlify Functions 运行时无法访问 VITE_ 前缀的变量！
+# 必须配置以下变量（不带 VITE_ 前缀）供 Functions 使用：
+# - SUPABASE_URL: 你的 Supabase 项目 URL（必需，供 Functions 使用）
+# - SUPABASE_ANON_KEY: 你的 Supabase anon public key（必需，供 Functions 使用）
+# 
+# 同时，为了前端构建时使用，也需要配置：
+# - VITE_SUPABASE_URL: 你的 Supabase 项目 URL（前端构建时使用）
+# - VITE_SUPABASE_ANON_KEY: 你的 Supabase anon public key（前端构建时使用）
 # 
 # 配置步骤：
 # 1. 访问 https://app.netlify.com/sites/qfce/configuration/env
 # 2. 点击 "Add a variable"
-# 3. 添加 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY
+# 3. 添加以下 4 个变量：
+#    - SUPABASE_URL（与 VITE_SUPABASE_URL 的值相同）
+#    - SUPABASE_ANON_KEY（与 VITE_SUPABASE_ANON_KEY 的值相同）
+#    - VITE_SUPABASE_URL
+#    - VITE_SUPABASE_ANON_KEY
 # 4. 保存后触发重新部署
 #
 # 注意：如果 Supabase API 在某些地区无法访问，系统会自动使用 Netlify Function 代理

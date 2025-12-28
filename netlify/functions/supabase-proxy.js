@@ -15,16 +15,31 @@ exports.handler = async (event) => {
     }
   }
 
-  // 从环境变量获取 Supabase URL（Netlify Functions 可以访问构建时环境变量）
-  const supabaseUrl = process.env.VITE_SUPABASE_URL || process.env.SUPABASE_URL
+  // 从环境变量获取 Supabase URL
+  // 注意：VITE_ 前缀的变量只在构建时可用，运行时不可用
+  // 所以需要在 Netlify 控制台配置不带 VITE_ 前缀的变量，或者同时配置两个
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY
+  
+  console.log('Environment check:', {
+    hasSupabaseUrl: !!supabaseUrl,
+    hasSupabaseAnonKey: !!supabaseAnonKey,
+    urlSource: process.env.SUPABASE_URL ? 'SUPABASE_URL' : (process.env.VITE_SUPABASE_URL ? 'VITE_SUPABASE_URL' : 'none'),
+    keySource: process.env.SUPABASE_ANON_KEY ? 'SUPABASE_ANON_KEY' : (process.env.VITE_SUPABASE_ANON_KEY ? 'VITE_SUPABASE_ANON_KEY' : 'none'),
+  })
+  
   if (!supabaseUrl) {
+    console.error('Supabase URL not configured in environment variables')
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ error: 'Supabase URL not configured' }),
+      body: JSON.stringify({ 
+        error: 'Supabase URL not configured',
+        hint: 'Please configure SUPABASE_URL or VITE_SUPABASE_URL in Netlify environment variables'
+      }),
     }
   }
 
@@ -87,8 +102,13 @@ exports.handler = async (event) => {
   }
   
   // 确保有 apikey（如果没有从 headers 获取）
-  if (!headers['apikey'] && process.env.VITE_SUPABASE_ANON_KEY) {
-    headers['apikey'] = process.env.VITE_SUPABASE_ANON_KEY
+  if (!headers['apikey'] && supabaseAnonKey) {
+    headers['apikey'] = supabaseAnonKey
+  }
+  
+  // 如果仍然没有 apikey，记录警告
+  if (!headers['apikey']) {
+    console.warn('Warning: apikey not found in headers or environment variables')
   }
 
   // 处理请求体
