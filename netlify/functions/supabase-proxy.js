@@ -56,29 +56,34 @@ exports.handler = async (event) => {
   // 构建目标 URL，确保正确处理路径
   const targetUrl = `${supabaseUrl.replace(/\/$/, '')}/${apiPath}`
   console.log('Proxying request:', event.httpMethod, targetUrl)
+  console.log('Request headers:', JSON.stringify(event.headers, null, 2))
+  console.log('Request body type:', typeof event.body)
+  console.log('Request body length:', event.body ? event.body.length : 0)
+  console.log('Is base64 encoded:', event.isBase64Encoded)
 
   // 获取原始请求的 headers
   const headers = {}
   
-  // 复制所有相关 headers
-  if (event.headers['content-type']) {
-    headers['Content-Type'] = event.headers['content-type']
+  // 复制所有相关 headers（保持原始大小写）
+  const contentType = event.headers['content-type'] || event.headers['Content-Type']
+  if (contentType) {
+    headers['Content-Type'] = contentType
   }
   
   // 转发认证 headers
-  if (event.headers.authorization) {
-    headers['Authorization'] = event.headers.authorization
+  if (event.headers.authorization || event.headers['Authorization']) {
+    headers['Authorization'] = event.headers.authorization || event.headers['Authorization']
   }
-  if (event.headers['x-client-info']) {
-    headers['x-client-info'] = event.headers['x-client-info']
+  if (event.headers['x-client-info'] || event.headers['X-Client-Info']) {
+    headers['x-client-info'] = event.headers['x-client-info'] || event.headers['X-Client-Info']
   }
-  if (event.headers.apikey) {
-    headers['apikey'] = event.headers.apikey
+  if (event.headers.apikey || event.headers['apikey']) {
+    headers['apikey'] = event.headers.apikey || event.headers['apikey']
   }
   
   // Supabase 需要的其他 headers
-  if (event.headers['prefer']) {
-    headers['Prefer'] = event.headers['prefer']
+  if (event.headers['prefer'] || event.headers['Prefer']) {
+    headers['Prefer'] = event.headers['prefer'] || event.headers['Prefer']
   }
   
   // 确保有 apikey（如果没有从 headers 获取）
@@ -86,11 +91,29 @@ exports.handler = async (event) => {
     headers['apikey'] = process.env.VITE_SUPABASE_ANON_KEY
   }
 
+  // 处理请求体
+  // Netlify Functions 的 event.body 可能是字符串（如果是 JSON 或 form-urlencoded）
+  // 需要原样转发，不要解析
+  let requestBody = event.body
+  
+  // 如果是 base64 编码的 body（Netlify 在某些情况下会这样做）
+  if (event.isBase64Encoded && event.body) {
+    requestBody = Buffer.from(event.body, 'base64').toString('utf-8')
+    console.log('Decoded base64 body, length:', requestBody.length)
+  }
+  
+  // 对于 form-urlencoded 请求，确保 Content-Type 正确
+  if (contentType && contentType.includes('application/x-www-form-urlencoded')) {
+    // 确保 Content-Type header 正确设置
+    headers['Content-Type'] = 'application/x-www-form-urlencoded'
+    console.log('Form-urlencoded request detected, body preview:', requestBody ? requestBody.substring(0, 100) : 'empty')
+  }
+
   try {
     const response = await fetch(targetUrl, {
       method: event.httpMethod,
       headers,
-      body: event.body ? event.body : undefined,
+      body: requestBody || undefined,
     })
 
     const data = await response.text()
