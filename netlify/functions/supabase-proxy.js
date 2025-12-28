@@ -30,6 +30,7 @@ exports.handler = async (event) => {
 
   // 从路径中提取 Supabase API 路径
   // 例如: /.netlify/functions/supabase-proxy/rest/v1/profiles
+  // 或者: /.netlify/functions/supabase-proxy/auth/v1/token
   let apiPath = ''
   if (event.path.includes('/supabase-proxy/')) {
     const pathMatch = event.path.match(/\/supabase-proxy\/(.+)/)
@@ -41,6 +42,7 @@ exports.handler = async (event) => {
   }
   
   if (!apiPath) {
+    console.error('Invalid proxy path:', event.path)
     return {
       statusCode: 400,
       headers: {
@@ -51,13 +53,18 @@ exports.handler = async (event) => {
     }
   }
   
-  const targetUrl = `${supabaseUrl}/${apiPath}`
+  // 构建目标 URL，确保正确处理路径
+  const targetUrl = `${supabaseUrl.replace(/\/$/, '')}/${apiPath}`
+  console.log('Proxying request:', event.httpMethod, targetUrl)
 
   // 获取原始请求的 headers
-  const headers = {
-    'Content-Type': event.headers['content-type'] || 'application/json',
+  const headers = {}
+  
+  // 复制所有相关 headers
+  if (event.headers['content-type']) {
+    headers['Content-Type'] = event.headers['content-type']
   }
-
+  
   // 转发认证 headers
   if (event.headers.authorization) {
     headers['Authorization'] = event.headers.authorization
@@ -67,6 +74,16 @@ exports.handler = async (event) => {
   }
   if (event.headers.apikey) {
     headers['apikey'] = event.headers.apikey
+  }
+  
+  // Supabase 需要的其他 headers
+  if (event.headers['prefer']) {
+    headers['Prefer'] = event.headers['prefer']
+  }
+  
+  // 确保有 apikey（如果没有从 headers 获取）
+  if (!headers['apikey'] && process.env.VITE_SUPABASE_ANON_KEY) {
+    headers['apikey'] = process.env.VITE_SUPABASE_ANON_KEY
   }
 
   try {

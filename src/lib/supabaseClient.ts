@@ -33,30 +33,47 @@ const customFetch = isNetlify && supabaseUrl
       
       // 如果是 Supabase API 请求，通过 Netlify Function 代理
       if (url.startsWith(supabaseUrl)) {
-        // 提取 API 路径（包括查询参数）
-        const urlObj = new URL(url)
-        const apiPath = urlObj.pathname.replace(/^\//, '') + urlObj.search
-        
-        // 构建代理 URL
-        const proxyUrl = `/.netlify/functions/supabase-proxy/${apiPath}`
-        
-        // 保留原始 headers
-        const headers = new Headers(init?.headers)
-        
-        // 确保包含 apikey（Supabase 需要）
-        if (!headers.has('apikey') && supabaseAnonKey) {
-          headers.set('apikey', supabaseAnonKey)
+        try {
+          // 提取 API 路径（包括查询参数）
+          const urlObj = new URL(url)
+          // 移除开头的斜杠，保留路径和查询参数
+          let apiPath = urlObj.pathname.replace(/^\//, '')
+          if (urlObj.search) {
+            apiPath += urlObj.search
+          }
+          
+          // 构建代理 URL
+          const proxyUrl = `/.netlify/functions/supabase-proxy/${apiPath}`
+          
+          // 保留原始 headers
+          const headers = new Headers(init?.headers)
+          
+          // 确保包含 apikey（Supabase 需要）
+          if (!headers.has('apikey') && supabaseAnonKey) {
+            headers.set('apikey', supabaseAnonKey)
+          }
+          
+          // 确保包含 Prefer header（如果存在）
+          if (init?.headers && 'Prefer' in init.headers) {
+            headers.set('Prefer', (init.headers as any).Prefer)
+          }
+          
+          // 确保包含 Content-Type（如果存在）
+          if (init?.headers && 'Content-Type' in init.headers) {
+            headers.set('Content-Type', (init.headers as any)['Content-Type'])
+          }
+          
+          console.log('[Proxy] Forwarding request:', init?.method || 'GET', proxyUrl)
+          
+          return fetch(proxyUrl, {
+            ...init,
+            headers,
+          })
+        } catch (error) {
+          console.error('[Proxy] Error building proxy URL:', error)
+          // 如果代理失败，回退到直接请求
+          return fetch(input, init)
         }
-        
-        // 确保包含 Prefer header（如果存在）
-        if (init?.headers && 'Prefer' in init.headers) {
-          headers.set('Prefer', (init.headers as any).Prefer)
-        }
-        
-        return fetch(proxyUrl, {
-          ...init,
-          headers,
-        })
       }
       
       // 非 Supabase 请求，使用原始 fetch
