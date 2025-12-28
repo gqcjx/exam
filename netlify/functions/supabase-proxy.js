@@ -1,7 +1,6 @@
-import type { Handler, HandlerEvent, HandlerContext } from '@netlify/functions'
-
 // 代理 Supabase API 请求
-export const handler: Handler = async (event: HandlerEvent, context: HandlerContext) => {
+// Netlify Functions 使用 Node.js 运行时
+exports.handler = async (event) => {
   // 处理 CORS 预检请求
   if (event.httpMethod === 'OPTIONS') {
     return {
@@ -31,7 +30,6 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
 
   // 从路径中提取 Supabase API 路径
   // 例如: /.netlify/functions/supabase-proxy/rest/v1/profiles
-  // 或者: /supabase-proxy/rest/v1/profiles (如果使用重写规则)
   let apiPath = ''
   if (event.path.includes('/supabase-proxy/')) {
     const pathMatch = event.path.match(/\/supabase-proxy\/(.+)/)
@@ -52,10 +50,11 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       body: JSON.stringify({ error: 'Invalid proxy path', path: event.path }),
     }
   }
+  
   const targetUrl = `${supabaseUrl}/${apiPath}`
 
   // 获取原始请求的 headers
-  const headers: Record<string, string> = {
+  const headers = {
     'Content-Type': event.headers['content-type'] || 'application/json',
   }
 
@@ -95,7 +94,7 @@ export const handler: Handler = async (event: HandlerEvent, context: HandlerCont
       },
       body: typeof jsonData === 'string' ? jsonData : JSON.stringify(jsonData),
     }
-  } catch (error: any) {
+  } catch (error) {
     console.error('Proxy error:', error)
     return {
       statusCode: 500,

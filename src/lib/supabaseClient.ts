@@ -26,15 +26,24 @@ const customFetch = isNetlify && supabaseUrl
   ? async (url: string, options?: RequestInit) => {
       // 如果是 Supabase API 请求，通过 Netlify Function 代理
       if (url.startsWith(supabaseUrl)) {
-        const apiPath = url.replace(supabaseUrl, '').replace(/^\//, '')
+        // 提取 API 路径（包括查询参数）
+        const urlObj = new URL(url)
+        const apiPath = urlObj.pathname.replace(/^\//, '') + urlObj.search
+        
+        // 构建代理 URL
         const proxyUrl = `/.netlify/functions/supabase-proxy/${apiPath}`
         
         // 保留原始 headers
         const headers = new Headers(options?.headers)
         
-        // 确保包含 apikey
+        // 确保包含 apikey（Supabase 需要）
         if (!headers.has('apikey') && supabaseAnonKey) {
           headers.set('apikey', supabaseAnonKey)
+        }
+        
+        // 确保包含 Prefer header（如果存在）
+        if (options?.headers && 'Prefer' in options.headers) {
+          headers.set('Prefer', (options.headers as any).Prefer)
         }
         
         return fetch(proxyUrl, {
