@@ -48,14 +48,25 @@ export default function GameDazui() {
         return
       }
 
-      // 构建游戏 URL，传递 token 和配置
-      // 根据 basename 决定路径
-      const basename = window.location.pathname.startsWith('/exam') ? '/exam' : ''
-      const returnUrl = `${basename}/dashboard`
-      const gameUrl = `${basename}/dazui/index.html?token=${encodeURIComponent(session.access_token)}&supabase_url=${encodeURIComponent(supabaseUrl)}&supabase_key=${encodeURIComponent(supabaseKey)}&return_url=${encodeURIComponent(returnUrl)}`
-      
-      // 跳转到游戏页面
-      window.location.href = gameUrl
+      // 将认证信息写入 localStorage（方案C：localStorage 存储 session）
+      // 这样游戏启动时不需要额外的网络请求来验证 token
+      try {
+        localStorage.setItem('supabase_auth_token', session.access_token)
+        localStorage.setItem('supabase_url', supabaseUrl)
+        localStorage.setItem('supabase_anon_key', supabaseKey)
+        
+        // 根据 basename 决定路径
+        const basename = window.location.pathname.startsWith('/exam') ? '/exam' : ''
+        const returnUrl = `${basename}/dashboard`
+        localStorage.setItem('game_return_url', returnUrl)
+        
+        // 跳转到游戏页面（不再通过 URL 参数传递）
+        const gameUrl = `${basename}/dazui/index.html`
+        window.location.href = gameUrl
+      } catch (error) {
+        console.error('Failed to write to localStorage:', error)
+        alert('无法启动游戏，请检查浏览器设置')
+      }
     })
   }, [session, profile, loading, navigate])
 

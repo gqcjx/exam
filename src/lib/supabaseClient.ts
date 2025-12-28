@@ -1,4 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
+import { createClient, SupabaseClientOptions } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL as string | undefined
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY as string | undefined
@@ -16,79 +16,79 @@ if (!supabaseReady) {
   )
 }
 
-// 检测是否在 Netlify 环境
-const isNetlify = typeof window !== 'undefined' && 
-  (window.location.hostname.includes('netlify.app') || 
-   window.location.hostname.includes('netlify.com'))
+// Supabase 客户端配置选项
+// 针对网络不稳定或连接重置问题的优化配置
+const clientOptions: SupabaseClientOptions<'public'> = {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    // 增加超时时间，避免连接重置
+    flowType: 'pkce',
+  },
+  global: {
+    // 添加自定义 fetch，支持重试机制
+    fetch: async (url, options = {}) => {
+      const maxRetries = 3
+      let lastError: Error | null = null
 
-// 自定义 fetch 函数，在 Netlify 环境下使用代理
-const customFetch = isNetlify && supabaseUrl
-  ? async (input: RequestInfo | URL, init?: RequestInit) => {
-      // 将 input 转换为 URL 字符串
-      const url = typeof input === 'string' 
-        ? input 
-        : input instanceof URL 
-          ? input.toString() 
-          : input.url
-      
-      // 如果是 Supabase API 请求，通过 Netlify Function 代理
-      if (url.startsWith(supabaseUrl)) {
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
-          // 提取 API 路径（包括查询参数）
-          const urlObj = new URL(url)
-          // 移除开头的斜杠，保留路径和查询参数
-          let apiPath = urlObj.pathname.replace(/^\//, '')
-          if (urlObj.search) {
-            apiPath += urlObj.search
-          }
-          
-          // 构建代理 URL
-          const proxyUrl = `/.netlify/functions/supabase-proxy/${apiPath}`
-          
-          // 保留原始 headers
-          const headers = new Headers(init?.headers)
-          
-          // 确保包含 apikey（Supabase 需要）
-          if (!headers.has('apikey') && supabaseAnonKey) {
-            headers.set('apikey', supabaseAnonKey)
-          }
-          
-          // 确保包含 Prefer header（如果存在）
-          if (init?.headers && 'Prefer' in init.headers) {
-            headers.set('Prefer', (init.headers as any).Prefer)
-          }
-          
-          // 确保包含 Content-Type（如果存在）
-          if (init?.headers && 'Content-Type' in init.headers) {
-            headers.set('Content-Type', (init.headers as any)['Content-Type'])
-          }
-          
-          console.log('[Proxy] Forwarding request:', init?.method || 'GET', proxyUrl)
-          
-          return fetch(proxyUrl, {
-            ...init,
-            headers,
+          // 添加超时控制（30秒）
+          const controller = new AbortController()
+          const timeoutId = setTimeout(() => controller.abort(), 30000)
+
+          const response = await fetch(url, {
+            ...options,
+            signal: controller.signal,
           })
-        } catch (error) {
-          console.error('[Proxy] Error building proxy URL:', error)
-          // 如果代理失败，回退到直接请求
-          return fetch(input, init)
+
+          clearTimeout(timeoutId)
+
+          // 如果是连接错误，重试
+          if (!response.ok && response.status === 0) {
+            throw new Error('Connection error')
+          }
+
+          return response
+        } catch (error: any) {
+          lastError = error
+
+          // 如果是连接重置或网络错误，且还有重试次数，则重试
+          if (
+            (error.name === 'AbortError' ||
+              error.message?.includes('reset') ||
+              error.message?.includes('network') ||
+              error.message?.includes('Failed to fetch')) &&
+            attempt < maxRetries
+          ) {
+            // 指数退避：1s, 2s, 4s
+            const delay = Math.min(1000 * Math.pow(2, attempt - 1), 4000)
+            console.warn(
+              `Supabase 请求失败（尝试 ${attempt}/${maxRetries}），${delay}ms 后重试...`,
+              error.message
+            )
+            await new Promise((resolve) => setTimeout(resolve, delay))
+            continue
+          }
+
+          // 如果达到最大重试次数或不是网络错误，抛出错误
+          throw error
         }
       }
-      
-      // 非 Supabase 请求，使用原始 fetch
-      return fetch(input, init)
-    }
-  : undefined
+
+      throw lastError || new Error('Request failed after retries')
+    },
+  },
+  db: {
+    schema: 'public',
+  },
+}
 
 // 仍然导出实例以避免类型为 null，若未配置会使用占位值，运行时请求会失败并提示配置环境变量
 export const supabase = createClient(
   supabaseUrl || 'http://localhost',
   supabaseAnonKey || 'public-anon-key-placeholder',
-  {
-    global: {
-      fetch: customFetch,
-    },
-  }
+  clientOptions
 )
 

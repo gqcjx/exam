@@ -10,21 +10,20 @@ let supabaseClient = null;
 let currentUserId = null;
 let gameStartTime = null; // 游戏开始时间
 
-// 从 URL 参数获取 token 并初始化 Supabase
+// 从 localStorage 获取 token 并初始化 Supabase（方案C：网络要求最少）
 async function initSupabase() {
 	try {
-		// 从 URL 参数获取 token
-		const urlParams = new URLSearchParams(window.location.search);
-		const token = urlParams.get('token');
-		const supabaseUrl = urlParams.get('supabase_url');
-		const supabaseKey = urlParams.get('supabase_key');
+		// 从 localStorage 获取认证信息（本地操作，无网络请求）
+		const token = localStorage.getItem('supabase_auth_token');
+		const supabaseUrl = localStorage.getItem('supabase_url');
+		const supabaseKey = localStorage.getItem('supabase_anon_key');
 		
 		if (!token || !supabaseUrl || !supabaseKey) {
 			console.log('未提供认证信息，游戏将以离线模式运行');
 			return;
 		}
 		
-		// 动态导入 Supabase 客户端
+		// 动态导入 Supabase 客户端（这可能需要网络请求，但可以在构建时静态包含）
 		const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
 		supabaseClient = createClient(supabaseUrl, supabaseKey, {
 			global: {
@@ -34,16 +33,24 @@ async function initSupabase() {
 			}
 		});
 		
-		// 验证 token 并获取用户信息
-		const { data: { user }, error } = await supabaseClient.auth.getUser();
-		if (error || !user) {
-			console.warn('认证失败，游戏将以离线模式运行', error);
+		// 跳过 token 验证（延迟验证策略：在保存分数时自然验证）
+		// 这样可以减少 1 次网络请求，提高启动速度
+		// 如果 token 失效，保存分数时会失败，但不影响游戏运行
+		// 从 token 中提取 user_id（JWT token 包含用户信息）
+		try {
+			const tokenParts = token.split('.');
+			if (tokenParts.length === 3) {
+				const payload = JSON.parse(atob(tokenParts[1]));
+				currentUserId = payload.sub; // JWT sub 字段是 user_id
+				console.log('✅ 已登录，积分将自动保存（延迟验证模式）');
+			} else {
+				console.warn('Token 格式不正确，游戏将以离线模式运行');
+				supabaseClient = null;
+			}
+		} catch (parseError) {
+			console.warn('无法从 token 中提取用户信息，游戏将以离线模式运行', parseError);
 			supabaseClient = null;
-			return;
 		}
-		
-		currentUserId = user.id;
-		console.log('✅ 已登录，积分将自动保存');
 	} catch (error) {
 		console.warn('Supabase 初始化失败，游戏将以离线模式运行', error);
 		supabaseClient = null;
@@ -112,9 +119,14 @@ async function exitGame() {
 		await saveGameScore();
 	}
 	
-	// 返回上一页或主页
-	const urlParams = new URLSearchParams(window.location.search);
-	const returnUrl = urlParams.get('return_url') || '/dashboard';
+	// 从 localStorage 读取返回 URL（方案C）
+	const returnUrl = localStorage.getItem('game_return_url') || '/dashboard';
+	
+	// 清理 localStorage 中的认证信息（可选，为了安全）
+	// localStorage.removeItem('supabase_auth_token');
+	// localStorage.removeItem('supabase_url');
+	// localStorage.removeItem('supabase_anon_key');
+	// localStorage.removeItem('game_return_url');
 	
 	// 如果是从主应用跳转过来的，返回主应用
 	if (window.parent !== window) {
