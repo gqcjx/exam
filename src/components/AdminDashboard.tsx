@@ -111,27 +111,27 @@ export function AdminDashboard() {
               .filter((item) => item && item.id)
               .slice(0, 3)
               .map((item) => (
-                <Link
-                  key={item.id}
-                  to="/admin/grading"
-                  className="card block transition hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+              <Link
+                key={item.id}
+                to="/admin/grading"
+                className="card block transition hover:shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
                       <p className="text-sm font-semibold text-slate-900">{item.paper_title || '未知试卷'}</p>
-                      <p className="mt-1 text-xs text-slate-600">
+                    <p className="mt-1 text-xs text-slate-600">
                         学生：{item.user_name || '未知'} | 提交时间：{item.submitted_at ? new Date(item.submitted_at).toLocaleString('zh-CN') : '未知'}
-                      </p>
-                      <p className="mt-1 text-xs text-slate-500 line-clamp-2">
+                    </p>
+                    <p className="mt-1 text-xs text-slate-500 line-clamp-2">
                         {Array.isArray(item.chosen) ? item.chosen.join(' ') : item.chosen || '无答案'}
-                      </p>
-                    </div>
-                    <span className="ml-3 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
-                      待批阅
-                    </span>
+                    </p>
                   </div>
-                </Link>
-              ))}
+                  <span className="ml-3 rounded-full bg-amber-100 px-2 py-1 text-xs font-semibold text-amber-700">
+                    待批阅
+                  </span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       )}
@@ -144,28 +144,28 @@ export function AdminDashboard() {
             {stats.recent_papers
               .filter((paper) => paper && paper.id && paper.title)
               .map((paper) => (
-                <Link
-                  key={paper.id}
-                  to={`/admin/papers`}
-                  className="card block transition hover:shadow-md"
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
+              <Link
+                key={paper.id}
+                to={`/admin/papers`}
+                className="card block transition hover:shadow-md"
+              >
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
                       <h3 className="font-semibold text-slate-900">{paper.title || '未命名试卷'}</h3>
-                      <div className="mt-2 space-y-1 text-xs text-slate-600">
-                        {paper.subject && <p>学科：{paper.subject}</p>}
-                        <p>题目数：{paper.question_count || 0} | 提交数：{paper.submission_count || 0}</p>
+                    <div className="mt-2 space-y-1 text-xs text-slate-600">
+                      {paper.subject && <p>学科：{paper.subject}</p>}
+                      <p>题目数：{paper.question_count || 0} | 提交数：{paper.submission_count || 0}</p>
                         <p>创建时间：{paper.created_at ? new Date(paper.created_at).toLocaleString('zh-CN') : '未知'}</p>
-                      </div>
                     </div>
-                    {paper.published && (
-                      <span className="ml-3 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
-                        已发布
-                      </span>
-                    )}
                   </div>
-                </Link>
-              ))}
+                  {paper.published && (
+                    <span className="ml-3 rounded-full bg-emerald-100 px-2 py-1 text-xs font-semibold text-emerald-700">
+                      已发布
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       )}

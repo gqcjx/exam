@@ -222,15 +222,15 @@ export default function AdminUsers() {
             下载导入模板
           </button>
           {canDeleteStudents && (
-            <button
-              className="btn btn-primary"
-              onClick={() => {
-                setShowImportDialog(true)
-                fileInputRef.current?.click()
-              }}
-            >
-              批量导入学生
-            </button>
+        <button
+          className="btn btn-primary"
+          onClick={() => {
+            setShowImportDialog(true)
+            fileInputRef.current?.click()
+          }}
+        >
+          批量导入学生
+        </button>
           )}
         </div>
         <input
@@ -489,14 +489,14 @@ function UserRowItem({
               </svg>
             </button>
           )}
-          <button
-            type="button"
-            className="btn btn-secondary btn-xs"
-            disabled={saving}
-            onClick={() => onSave({ userId: user.user_id, updates: { role, disabled } })}
-          >
-            {saving ? '保存中...' : '保存'}
-          </button>
+        <button
+          type="button"
+          className="btn btn-secondary btn-xs"
+          disabled={saving}
+          onClick={() => onSave({ userId: user.user_id, updates: { role, disabled } })}
+        >
+          {saving ? '保存中...' : '保存'}
+        </button>
         </div>
       </td>
     </tr>

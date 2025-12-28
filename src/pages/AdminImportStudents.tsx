@@ -251,7 +251,7 @@ export default function AdminImportStudents() {
               支持 Excel 格式文件，可以批量导入学生账号。管理员可以导入所有学校的学生，班主任只能导入自己管理的班级的学生。
               <br />
               <span className="font-medium text-slate-700">
-                单次导入上限：6000 条。姓名和邮箱为必填项（邮箱示例：gqc@gfce.com）。已存在的学生（通过邮箱或手机号判断）将被跳过，同班同名将自动添加后缀（A, AA, AAA...）。
+                单次导入上限：6000 条。已存在的学生（通过邮箱或手机号判断）将被跳过，同班同名将自动添加后缀（A, AA, AAA...）。
               </span>
             </p>
           </div>
@@ -376,7 +376,7 @@ export default function AdminImportStudents() {
             className="block w-full text-sm text-slate-600 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-brand-50 file:text-brand-700 hover:file:bg-brand-100"
           />
           <p className="mt-2 text-xs text-slate-500">
-            Excel文件格式：姓名（必填）、昵称（可选）、邮箱（必填，示例：gqc@gfce.com）、手机号（可选）、学校（可选）、年级（可选）、班级（可选）、密码（可选）
+            Excel文件格式：姓名（必填）、昵称（可选）、邮箱（可选）、手机号（可选）、学校（可选）、年级（可选）、班级（可选）、密码（可选）
           </p>
         </div>
 
@@ -565,7 +565,7 @@ export default function AdminImportStudents() {
               <strong>昵称</strong>（可选）：学生昵称
             </li>
             <li>
-              <strong>邮箱</strong>（必填）：学生邮箱，示例：gqc@gfce.com。已存在的邮箱将被跳过
+              <strong>邮箱</strong>（可选）：学生邮箱，如果不提供将自动生成临时邮箱。已存在的邮箱将被跳过
             </li>
             <li>
               <strong>手机号</strong>（可选）：学生手机号。已存在的手机号将被跳过

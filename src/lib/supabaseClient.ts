@@ -16,9 +16,46 @@ if (!supabaseReady) {
   )
 }
 
+// 检测是否在 Netlify 环境
+const isNetlify = typeof window !== 'undefined' && 
+  (window.location.hostname.includes('netlify.app') || 
+   window.location.hostname.includes('netlify.com'))
+
+// 自定义 fetch 函数，在 Netlify 环境下使用代理
+const customFetch = isNetlify && supabaseUrl
+  ? async (url: string, options?: RequestInit) => {
+      // 如果是 Supabase API 请求，通过 Netlify Function 代理
+      if (url.startsWith(supabaseUrl)) {
+        const apiPath = url.replace(supabaseUrl, '').replace(/^\//, '')
+        const proxyUrl = `/.netlify/functions/supabase-proxy/${apiPath}`
+        
+        // 保留原始 headers
+        const headers = new Headers(options?.headers)
+        
+        // 确保包含 apikey
+        if (!headers.has('apikey') && supabaseAnonKey) {
+          headers.set('apikey', supabaseAnonKey)
+        }
+        
+        return fetch(proxyUrl, {
+          ...options,
+          headers,
+        })
+      }
+      
+      // 非 Supabase 请求，使用原始 fetch
+      return fetch(url, options)
+    }
+  : undefined
+
 // 仍然导出实例以避免类型为 null，若未配置会使用占位值，运行时请求会失败并提示配置环境变量
 export const supabase = createClient(
   supabaseUrl || 'http://localhost',
-  supabaseAnonKey || 'public-anon-key-placeholder'
+  supabaseAnonKey || 'public-anon-key-placeholder',
+  {
+    global: {
+      fetch: customFetch,
+    },
+  }
 )
 

@@ -17,10 +17,13 @@
 # 需要在 Netlify 控制台 → Site settings → Build & deploy → Environment variables 中配置：
 # - VITE_SUPABASE_URL: 你的 Supabase 项目 URL
 # - VITE_SUPABASE_ANON_KEY: 你的 Supabase anon public key
+# - SUPABASE_URL: 你的 Supabase 项目 URL（用于 Netlify Functions，如果 VITE_SUPABASE_URL 未设置）
 # 
 # 配置步骤：
 # 1. 访问 https://app.netlify.com/sites/qfce/configuration/env
 # 2. 点击 "Add a variable"
 # 3. 添加 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY
 # 4. 保存后触发重新部署
+#
+# 注意：如果 Supabase API 在某些地区无法访问，系统会自动使用 Netlify Function 代理
 

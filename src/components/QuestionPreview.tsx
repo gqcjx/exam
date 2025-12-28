@@ -22,18 +22,18 @@ export function QuestionPreview({ question }: { question: Question }) {
           {question.options && Array.isArray(question.options) && question.options.length > 0 ? (
             question.options.map((opt, idx) => (
               opt ? (
-                <label
+            <label
                   key={opt.label || idx}
-                  className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700"
-                >
-                  <input
-                    type={type === 'single' ? 'radio' : 'checkbox'}
-                    disabled
-                    className="h-4 w-4 rounded border-slate-300 text-brand-600"
-                  />
+              className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-700"
+            >
+              <input
+                type={type === 'single' ? 'radio' : 'checkbox'}
+                disabled
+                className="h-4 w-4 rounded border-slate-300 text-brand-600"
+              />
                   <span className="font-semibold text-slate-800">{opt.label || String.fromCharCode(65 + idx)}.</span>
                   <span>{opt.text || ''}</span>
-                </label>
+            </label>
               ) : null
             ))
           ) : (
@@ -58,13 +58,13 @@ export function QuestionPreview({ question }: { question: Question }) {
         <div className="space-y-2 text-sm">
           {question.answer && Array.isArray(question.answer) && question.answer.length > 0 ? (
             question.answer.map((_, idx) => (
-              <input
-                key={idx}
-                type="text"
-                disabled
-                placeholder={`填空${idx + 1}`}
-                className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600"
-              />
+            <input
+              key={idx}
+              type="text"
+              disabled
+              placeholder={`填空${idx + 1}`}
+              className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm text-slate-600"
+            />
             ))
           ) : (
             <p className="text-xs text-slate-500">答案数据缺失</p>
