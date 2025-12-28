@@ -89,8 +89,8 @@ export default function Dashboard() {
         <h1 className="text-2xl font-bold text-slate-900">首页概览</h1>
         {profile && (
           <div className="text-sm text-slate-600">
-            <span className="font-semibold">{profile.name || session.user.email}</span>
-            {profile.role && <span className="ml-2 text-slate-500">({profile.role})</span>}
+            <span className="font-semibold">{profile?.name || session?.user?.email || '用户'}</span>
+            {profile?.role && <span className="ml-2 text-slate-500">({profile.role})</span>}
           </div>
         )}
       </div>

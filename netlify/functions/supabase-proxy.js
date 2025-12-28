@@ -45,7 +45,7 @@ exports.handler = async (event) => {
 
   // 从路径中提取 Supabase API 路径
   // 例如: /.netlify/functions/supabase-proxy/rest/v1/profiles
-  // 或者: /.netlify/functions/supabase-proxy/auth/v1/token
+  // 或者: /.netlify/functions/supabase-proxy/auth/v1/token?grant_type=password
   let apiPath = ''
   if (event.path.includes('/supabase-proxy/')) {
     const pathMatch = event.path.match(/\/supabase-proxy\/(.+)/)
@@ -56,19 +56,27 @@ exports.handler = async (event) => {
     apiPath = event.path.replace('/.netlify/functions/supabase-proxy/', '')
   }
   
+  // 如果路径中没有查询参数，尝试从 event.queryStringParameters 获取
+  if (!apiPath.includes('?') && event.queryStringParameters) {
+    const queryString = new URLSearchParams(event.queryStringParameters).toString()
+    if (queryString) {
+      apiPath += '?' + queryString
+    }
+  }
+  
   if (!apiPath) {
-    console.error('Invalid proxy path:', event.path)
+    console.error('Invalid proxy path:', event.path, 'queryStringParameters:', event.queryStringParameters)
     return {
       statusCode: 400,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ error: 'Invalid proxy path', path: event.path }),
+      body: JSON.stringify({ error: 'Invalid proxy path', path: event.path, query: event.queryStringParameters }),
     }
   }
   
-  // 构建目标 URL，确保正确处理路径
+  // 构建目标 URL，确保正确处理路径和查询参数
   const targetUrl = `${supabaseUrl.replace(/\/$/, '')}/${apiPath}`
   console.log('Proxying request:', event.httpMethod, targetUrl)
   console.log('Request headers:', JSON.stringify(event.headers, null, 2))
@@ -130,6 +138,11 @@ exports.handler = async (event) => {
   }
 
   try {
+    console.log('Sending request to:', targetUrl)
+    console.log('Request method:', event.httpMethod)
+    console.log('Request headers:', JSON.stringify(headers, null, 2))
+    console.log('Request body preview:', requestBody ? (typeof requestBody === 'string' ? requestBody.substring(0, 200) : String(requestBody).substring(0, 200)) : 'empty')
+    
     const response = await fetch(targetUrl, {
       method: event.httpMethod,
       headers,
@@ -144,6 +157,9 @@ exports.handler = async (event) => {
       jsonData = data
     }
 
+    console.log('Response status:', response.status)
+    console.log('Response preview:', typeof jsonData === 'string' ? jsonData.substring(0, 200) : JSON.stringify(jsonData).substring(0, 200))
+
     return {
       statusCode: response.status,
       headers: {
@@ -156,13 +172,14 @@ exports.handler = async (event) => {
     }
   } catch (error) {
     console.error('Proxy error:', error)
+    console.error('Error stack:', error.stack)
     return {
       statusCode: 500,
       headers: {
         'Content-Type': 'application/json',
         'Access-Control-Allow-Origin': '*',
       },
-      body: JSON.stringify({ error: error.message || 'Proxy request failed' }),
+      body: JSON.stringify({ error: error.message || 'Proxy request failed', details: error.stack }),
     }
   }
 }
