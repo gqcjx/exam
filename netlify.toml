@@ -19,14 +19,15 @@
 # - VITE_SUPABASE_ANON_KEY: 你的 Supabase anon public key
 # 
 # 配置步骤：
-# 1. 访问 https://app.netlify.com/projects/qfce/configuration/env
+# 1. 访问 Netlify 控制台的环境变量配置页面
 # 2. 点击 "Add a variable"
 # 3. 添加 VITE_SUPABASE_URL 和 VITE_SUPABASE_ANON_KEY
 # 4. 保存后触发重新部署
 #
-# 项目信息：
+# 项目信息（运行 netlify status 查看最新信息）：
 # - 项目名称: qfce
-# - 项目 ID: b83d1d7a-c7c9-41f6-92b6-314dce9bbeb9
+# - 项目 ID: 431c093b-057a-4c77-a598-5c389223a923
 # - 项目 URL: https://qfce.netlify.app
 # - Admin URL: https://app.netlify.com/projects/qfce
+# - 环境变量配置: https://app.netlify.com/projects/qfce/configuration/env
 
