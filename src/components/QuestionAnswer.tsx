@@ -20,15 +20,13 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
 
   if (question.type === 'single') {
     return (
-      <div className="space-y-2">
+      <div className="exam-options">
         {question.options?.map((opt) => {
           const checked = displayValue?.includes(opt.label) || false
           return (
             <label
               key={opt.label}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                checked ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'
-              } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+              className={`exam-option ${checked ? 'selected' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <input
                 type="radio"
@@ -37,14 +35,14 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
                 checked={checked}
                 onChange={() => !disabled && onChange([opt.label])}
                 disabled={disabled}
-                className="mt-0.5"
               />
-              <div className="flex-1">
-                <span className="font-semibold text-slate-700">{opt.label}.</span>
-                <span className="ml-2 text-slate-900">{opt.text}</span>
+              <span className="exam-option-radio"></span>
+              <div className="exam-option-text">
+                <span className="exam-option-label">{opt.label}.</span>
+                <span>{opt.text}</span>
               </div>
               {showAnswer && question.answer.includes(opt.label) && (
-                <span className="text-xs font-semibold text-emerald-600">✓ 正确答案</span>
+                <span className="text-xs font-semibold text-emerald-600 ml-2">✓ 正确答案</span>
               )}
             </label>
           )
@@ -55,15 +53,13 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
 
   if (question.type === 'multiple') {
     return (
-      <div className="space-y-2">
+      <div className="exam-options">
         {question.options?.map((opt) => {
           const checked = displayValue?.includes(opt.label) || false
           return (
             <label
               key={opt.label}
-              className={`flex cursor-pointer items-start gap-3 rounded-lg border p-3 transition-colors ${
-                checked ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'
-              } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+              className={`exam-option ${checked ? 'selected' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <input
                 type="checkbox"
@@ -79,14 +75,14 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
                   }
                 }}
                 disabled={disabled}
-                className="mt-0.5"
               />
-              <div className="flex-1">
-                <span className="font-semibold text-slate-700">{opt.label}.</span>
-                <span className="ml-2 text-slate-900">{opt.text}</span>
+              <span className="exam-option-checkbox"></span>
+              <div className="exam-option-text">
+                <span className="exam-option-label">{opt.label}.</span>
+                <span>{opt.text}</span>
               </div>
               {showAnswer && question.answer.includes(opt.label) && (
-                <span className="text-xs font-semibold text-emerald-600">✓ 正确答案</span>
+                <span className="text-xs font-semibold text-emerald-600 ml-2">✓ 正确答案</span>
               )}
             </label>
           )
@@ -97,7 +93,7 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
 
   if (question.type === 'true_false') {
     return (
-      <div className="flex gap-3">
+      <div className="exam-options">
         {[
           { label: 'T', text: '正确' },
           { label: 'F', text: '错误' },
@@ -106,9 +102,7 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
           return (
             <label
               key={opt.label}
-              className={`flex cursor-pointer items-center gap-2 rounded-lg border px-4 py-3 transition-colors ${
-                checked ? 'border-brand-500 bg-brand-50' : 'border-slate-200 hover:bg-slate-50'
-              } ${disabled ? 'cursor-not-allowed opacity-60' : ''}`}
+              className={`exam-option ${checked ? 'selected' : ''} ${disabled ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
               <input
                 type="radio"
@@ -118,9 +112,12 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
                 onChange={() => !disabled && onChange([opt.label])}
                 disabled={disabled}
               />
-              <span className="font-semibold text-slate-900">{opt.text}</span>
+              <span className="exam-option-radio"></span>
+              <div className="exam-option-text">
+                <span className="font-semibold">{opt.text}</span>
+              </div>
               {showAnswer && question.answer.includes(opt.label) && (
-                <span className="ml-2 text-xs font-semibold text-emerald-600">✓</span>
+                <span className="text-xs font-semibold text-emerald-600 ml-2">✓</span>
               )}
             </label>
           )
@@ -149,7 +146,7 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
                 onChange(newAnswers)
               }}
               disabled={disabled}
-              className="flex-1 rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+              className="exam-fill-input"
               placeholder="请输入答案"
             />
             {showAnswer && question.answer[idx] && (
@@ -170,7 +167,7 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
           onChange={(e) => !disabled && onChange(e.target.value)}
           disabled={disabled}
           rows={6}
-          className="w-full rounded-lg border border-slate-200 px-3 py-2 text-sm focus:border-brand-500 focus:outline-none"
+          className="exam-textarea"
           placeholder="请输入答案..."
         />
         {showAnswer && question.answer[0] && (
@@ -185,4 +182,3 @@ export function QuestionAnswer({ question, value, onChange, disabled = false, sh
 
   return null
 }
-

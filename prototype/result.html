@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>考试成绩 - 在线考试系统</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        * {
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        }
+        h1, h2, h3 {
+            font-family: 'Montserrat', sans-serif;
+        }
+        .result-container {
+            width: 375px;
+            height: 812px;
+            margin: 0 auto;
+            background: linear-gradient(135deg, #f5f5f5 0%, #e8f5e9 100%);
+            overflow-y: auto;
+        }
+        .score-card {
+            background: linear-gradient(135deg, #2E8B57 0%, #3da86a 100%);
+            border-radius: 0 0 24px 24px;
+            padding: 32px 24px;
+            color: white;
+            text-align: center;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .score-circle {
+            width: 120px;
+            height: 120px;
+            border: 6px solid rgba(255,255,255,0.3);
+            border-top-color: white;
+            border-radius: 50%;
+            margin: 0 auto 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            font-weight: 700;
+            position: relative;
+        }
+        .question-item {
+            background: white;
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            transition: all 0.2s ease;
+        }
+        .question-item:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .question-item.correct {
+            border-left: 4px solid #2E8B57;
+        }
+        .question-item.wrong {
+            border-left: 4px solid #ef4444;
+        }
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        .badge-success {
+            background: #d4edda;
+            color: #155724;
+        }
+        .badge-danger {
+            background: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <div class="result-container">
+        <!-- 成绩总览卡片 -->
+        <div class="score-card">
+            <div class="mb-4">
+                <i class="fas fa-trophy text-4xl opacity-80"></i>
+            </div>
+            <h1 class="text-2xl font-bold mb-2">考试完成</h1>
+            <p class="text-sm opacity-90 mb-6">数学期中考试</p>
+            
+            <div class="score-circle">
+                85
+            </div>
+            <div class="text-sm opacity-90 mb-4">总分：100分</div>
+            
+            <div class="grid grid-cols-3 gap-4 mt-6">
+                <div>
+                    <div class="text-2xl font-bold">17</div>
+                    <div class="text-xs opacity-80 mt-1">正确</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold">3</div>
+                    <div class="text-xs opacity-80 mt-1">错误</div>
+                </div>
+                <div>
+                    <div class="text-2xl font-bold">85%</div>
+                    <div class="text-xs opacity-80 mt-1">正确率</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 详细结果 -->
+        <div class="px-4 py-6">
+            <!-- 统计信息 -->
+            <div class="bg-white rounded-xl p-4 mb-6 shadow-sm">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-chart-pie text-[#2E8B57] mr-2"></i>答题统计
+                </h3>
+                <div class="space-y-3">
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">单选题</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#2E8B57] rounded-full" style="width: 90%"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800">9/10</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">多选题</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#2E8B57] rounded-full" style="width: 80%"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800">4/5</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <span class="text-gray-600">判断题</span>
+                        <div class="flex items-center space-x-2">
+                            <div class="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-[#2E8B57] rounded-full" style="width: 100%"></div>
+                            </div>
+                            <span class="text-sm font-semibold text-gray-800">5/5</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 错题列表 -->
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold text-gray-800 mb-4">
+                    <i class="fas fa-exclamation-circle text-[#ef4444] mr-2"></i>错题回顾
+                </h3>
+                
+                <!-- 错题项 1 -->
+                <div class="question-item wrong">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="badge badge-danger">错误</span>
+                                <span class="text-xs text-gray-500">第 5 题 · 单选题 · 5分</span>
+                            </div>
+                            <p class="font-semibold text-gray-800">已知函数 f(x) = x² + 2x + 1，求 f(2) 的值是多少？</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2">
+                        <div class="text-sm">
+                            <span class="text-gray-600">您的答案：</span>
+                            <span class="font-semibold text-red-600">A. 7</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="text-gray-600">正确答案：</span>
+                            <span class="font-semibold text-[#2E8B57]">B. 9</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 错题项 2 -->
+                <div class="question-item wrong">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="badge badge-danger">错误</span>
+                                <span class="text-xs text-gray-500">第 12 题 · 多选题 · 10分</span>
+                            </div>
+                            <p class="font-semibold text-gray-800">下列哪些是质数？（多选）</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2">
+                        <div class="text-sm">
+                            <span class="text-gray-600">您的答案：</span>
+                            <span class="font-semibold text-red-600">A, C</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="text-gray-600">正确答案：</span>
+                            <span class="font-semibold text-[#2E8B57]">A, B, C</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 错题项 3 -->
+                <div class="question-item wrong">
+                    <div class="flex items-start justify-between mb-2">
+                        <div class="flex-1">
+                            <div class="flex items-center space-x-2 mb-1">
+                                <span class="badge badge-danger">错误</span>
+                                <span class="text-xs text-gray-500">第 18 题 · 填空题 · 8分</span>
+                            </div>
+                            <p class="font-semibold text-gray-800">计算：2 + 3 × 4 = ___</p>
+                        </div>
+                    </div>
+                    <div class="mt-3 space-y-2">
+                        <div class="text-sm">
+                            <span class="text-gray-600">您的答案：</span>
+                            <span class="font-semibold text-red-600">20</span>
+                        </div>
+                        <div class="text-sm">
+                            <span class="text-gray-600">正确答案：</span>
+                            <span class="font-semibold text-[#2E8B57]">14</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="space-y-3 mb-6">
+                <button class="w-full py-3 bg-[#2E8B57] text-white rounded-xl font-semibold shadow-md hover:bg-[#3da86a] transition-colors">
+                    <i class="fas fa-book mr-2"></i>加入错题本
+                </button>
+                <button class="w-full py-3 bg-white border-2 border-[#2E8B57] text-[#2E8B57] rounded-xl font-semibold hover:bg-[#f0fdf4] transition-colors">
+                    <i class="fas fa-redo mr-2"></i>返回首页
+                </button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
