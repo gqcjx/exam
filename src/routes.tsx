@@ -27,6 +27,16 @@ import Settings from './pages/Settings'
 import GameDazui from './pages/GameDazui'
 import GameRanking from './pages/GameRanking'
 import { ProtectedRoute } from './components/ProtectedRoute'
+// 移动端组件
+import LoginMobile from './pages/mobile/LoginMobile'
+import DashboardMobile from './pages/mobile/DashboardMobile'
+import ExamMobile from './pages/mobile/ExamMobile'
+import ResultMobile from './pages/mobile/ResultMobile'
+import WrongQuestionsMobile from './pages/mobile/WrongQuestionsMobile'
+import RankingMobile from './pages/mobile/RankingMobile'
+import ReportMobile from './pages/mobile/ReportMobile'
+import SettingsMobile from './pages/mobile/SettingsMobile'
+import { DeviceAwareRoute } from './components/DeviceAwareRoute'
 
 export const router = createBrowserRouter(
   [
@@ -50,14 +60,27 @@ export const router = createBrowserRouter(
   {
     element: <AppLayout />,
     children: [
-      { path: '/login', element: <Login /> },
+      { 
+        path: '/login', 
+        element: (
+          <DeviceAwareRoute
+            mobileComponent={<LoginMobile />}
+            desktopComponent={<Login />}
+            requireAuth={false}
+          />
+        )
+      },
        { path: '/register', element: <Register /> },
        { path: '/reset', element: <ResetPassword /> },
       {
         path: '/dashboard',
         element: (
           <ProtectedRoute>
-            <Dashboard />
+            <DeviceAwareRoute
+              mobileComponent={<DashboardMobile />}
+              desktopComponent={<Dashboard />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -65,7 +88,11 @@ export const router = createBrowserRouter(
         path: '/settings',
         element: (
           <ProtectedRoute>
-            <Settings />
+            <DeviceAwareRoute
+              mobileComponent={<SettingsMobile />}
+              desktopComponent={<Settings />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -137,7 +164,11 @@ export const router = createBrowserRouter(
         path: '/exam/:paperId',
         element: (
           <ProtectedRoute roles={['student']}>
-            <Exam />
+            <DeviceAwareRoute
+              mobileComponent={<ExamMobile />}
+              desktopComponent={<Exam />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -145,7 +176,11 @@ export const router = createBrowserRouter(
         path: '/result/:paperId',
         element: (
           <ProtectedRoute roles={['student', 'parent', 'teacher', 'admin']}>
-            <Result />
+            <DeviceAwareRoute
+              mobileComponent={<ResultMobile />}
+              desktopComponent={<Result />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -161,7 +196,11 @@ export const router = createBrowserRouter(
         path: '/wrong-questions',
         element: (
           <ProtectedRoute roles={['student']}>
-            <WrongQuestions />
+            <DeviceAwareRoute
+              mobileComponent={<WrongQuestionsMobile />}
+              desktopComponent={<WrongQuestions />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -169,7 +208,11 @@ export const router = createBrowserRouter(
         path: '/ranking',
         element: (
           <ProtectedRoute>
-            <Ranking />
+            <DeviceAwareRoute
+              mobileComponent={<RankingMobile />}
+              desktopComponent={<Ranking />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },
@@ -177,7 +220,11 @@ export const router = createBrowserRouter(
         path: '/report',
         element: (
           <ProtectedRoute>
-            <Report />
+            <DeviceAwareRoute
+              mobileComponent={<ReportMobile />}
+              desktopComponent={<Report />}
+              roles={['student']}
+            />
           </ProtectedRoute>
         ),
       },

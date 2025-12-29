@@ -1,7 +1,8 @@
-import { Link, NavLink, Outlet } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { NotificationBell } from '../components/NotificationBell'
 import { UserMenu } from '../components/UserMenu'
+import { isMobileDevice } from '../utils/deviceDetection'
 
 const adminNavItems = [
   { to: '/admin/questions', label: '题库' },
@@ -33,6 +34,20 @@ const parentNavItems = [
 
 export default function AppLayout() {
   const { session, profile, loading, signOut } = useAuth()
+  const location = useLocation()
+  const isMobile = isMobileDevice()
+  const isStudent = profile?.role === 'student'
+  
+  // 移动端学生用户不显示顶部导航栏（使用移动端底部导航）
+  const hideHeader = isMobile && isStudent && (
+    location.pathname === '/dashboard' ||
+    location.pathname.startsWith('/exam/') ||
+    location.pathname.startsWith('/result/') ||
+    location.pathname === '/wrong-questions' ||
+    location.pathname === '/ranking' ||
+    location.pathname === '/report' ||
+    location.pathname === '/settings'
+  )
   
   const getNavItems = () => {
     if (!profile) return []
@@ -46,7 +61,8 @@ export default function AppLayout() {
   
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900">
-      <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
+      {!hideHeader && (
+        <header className="border-b border-slate-200 bg-white/80 backdrop-blur">
         <div className="mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-3">
           <Link to="/" className="flex items-center gap-2 text-sm font-semibold text-slate-900">
             <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-brand-600 text-white">QF</span>
@@ -95,7 +111,8 @@ export default function AppLayout() {
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-6xl px-6 py-6">
+      )}
+      <main className={`mx-auto w-full ${hideHeader ? 'px-0 py-0' : 'max-w-6xl px-6 py-6'}`}>
         <Outlet />
       </main>
     </div>
