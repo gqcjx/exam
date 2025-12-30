@@ -25,7 +25,6 @@ import Register from './pages/Register'
 import ResetPassword from './pages/ResetPassword'
 import Settings from './pages/Settings'
 import GameDazui from './pages/GameDazui'
-import GameRanking from './pages/GameRanking'
 import { ProtectedRoute } from './components/ProtectedRoute'
 // 移动端组件
 import LoginMobile from './pages/mobile/LoginMobile'
@@ -233,14 +232,6 @@ export const router = createBrowserRouter(
         element: (
           <ProtectedRoute roles={['student']}>
             <GameDazui />
-          </ProtectedRoute>
-        ),
-      },
-      {
-        path: '/game/ranking',
-        element: (
-          <ProtectedRoute>
-            <GameRanking />
           </ProtectedRoute>
         ),
       },

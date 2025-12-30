@@ -5,128 +5,13 @@
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 
-// ========== Supabase 集成 ==========
-let supabaseClient = null;
-let currentUserId = null;
-let gameStartTime = null; // 游戏开始时间
-
-// 从 localStorage 获取 token 并初始化 Supabase（方案C：网络要求最少）
-async function initSupabase() {
-	try {
-		// 从 localStorage 获取认证信息（本地操作，无网络请求）
-		const token = localStorage.getItem('supabase_auth_token');
-		const supabaseUrl = localStorage.getItem('supabase_url');
-		const supabaseKey = localStorage.getItem('supabase_anon_key');
-
-		if (!token || !supabaseUrl || !supabaseKey) {
-			console.log('未提供认证信息，游戏将以离线模式运行');
-			return;
-		}
-
-		// 动态导入 Supabase 客户端（这可能需要网络请求，但可以在构建时静态包含）
-		const { createClient } = await import('https://esm.sh/@supabase/supabase-js@2');
-		supabaseClient = createClient(supabaseUrl, supabaseKey, {
-			global: {
-				headers: {
-					Authorization: `Bearer ${token}`
-				}
-			}
-		});
-
-		// 跳过 token 验证（延迟验证策略：在保存分数时自然验证）
-		// 这样可以减少 1 次网络请求，提高启动速度
-		// 如果 token 失效，保存分数时会失败，但不影响游戏运行
-		// 从 token 中提取 user_id（JWT token 包含用户信息）
-		try {
-			const tokenParts = token.split('.');
-			if (tokenParts.length === 3) {
-				const payload = JSON.parse(atob(tokenParts[1]));
-				currentUserId = payload.sub; // JWT sub 字段是 user_id
-				console.log('✅ 已登录，积分将自动保存（延迟验证模式）');
-			} else {
-				console.warn('Token 格式不正确，游戏将以离线模式运行');
-				supabaseClient = null;
-			}
-		} catch (parseError) {
-			console.warn('无法从 token 中提取用户信息，游戏将以离线模式运行', parseError);
-			supabaseClient = null;
-		}
-	} catch (error) {
-		console.warn('Supabase 初始化失败，游戏将以离线模式运行', error);
-		supabaseClient = null;
-	}
-}
-
-// 保存游戏积分
-async function saveGameScore() {
-	if (!supabaseClient || !currentUserId || !gameStartTime) {
-		return;
-	}
-
-	const playDuration = Math.floor((Date.now() - gameStartTime) / 1000);
-
-	const gameData = {
-		user_id: currentUserId,
-		game_name: 'dazui',
-		score: STATE.score,
-		level: STATE.level,
-		correct_count: STATE.correct,
-		wrong_count: STATE.wrong,
-		play_duration: playDuration,
-		best_score: STATE.score // 初始值，后续会更新
-	};
-
-	try {
-		// 先查询是否已有记录
-		const { data: existing } = await supabaseClient
-			.from('game_scores')
-			.select('id, best_score')
-			.eq('user_id', currentUserId)
-			.eq('game_name', 'dazui')
-			.single();
-
-		// 如果当前分数更高，更新 best_score
-		if (existing && STATE.score > (existing.best_score || 0)) {
-			gameData.best_score = STATE.score;
-		} else if (existing) {
-			gameData.best_score = existing.best_score;
-		}
-
-		// 使用 upsert，如果已存在则更新，不存在则插入
-		const { data, error } = await supabaseClient
-			.from('game_scores')
-			.upsert(gameData, {
-				onConflict: 'user_id,game_name',
-				ignoreDuplicates: false
-			})
-			.select()
-			.single();
-
-		if (error) throw error;
-
-		console.log('✅ 游戏积分已保存', data);
-		showToast('✅ 积分已保存！', '#16a34a');
-	} catch (error) {
-		console.error('❌ 保存积分失败', error);
-		showToast('⚠️ 积分保存失败，请检查网络', '#dc2626');
-	}
-}
+// ========== 游戏已移除数据统计功能以优化网络传输速度 ==========
+// 游戏现在仅作为本地娱乐功能，不保存统计数据
 
 // 退出游戏
 async function exitGame() {
-	if (STATE.running && gameStartTime) {
-		// 如果游戏正在运行，先保存积分
-		await saveGameScore();
-	}
-
-	// 从 localStorage 读取返回 URL（方案C）
+	// 从 localStorage 读取返回 URL
 	const returnUrl = localStorage.getItem('game_return_url') || '/dashboard';
-
-	// 清理 localStorage 中的认证信息（可选，为了安全）
-	// localStorage.removeItem('supabase_auth_token');
-	// localStorage.removeItem('supabase_url');
-	// localStorage.removeItem('supabase_anon_key');
-	// localStorage.removeItem('game_return_url');
 
 	// 如果是从主应用跳转过来的，返回主应用
 	if (window.parent !== window) {
@@ -137,9 +22,6 @@ async function exitGame() {
 		window.location.href = returnUrl;
 	}
 }
-
-// 页面加载时初始化 Supabase
-initSupabase();
 
 // UI
 const scoreEl = document.getElementById('score');
@@ -314,17 +196,11 @@ let items = []; // {x,y,text,correct,right, w,h, ttl}
 let spawnTimer; let animationId;
 
 function resetGame() {
-	// 如果游戏已运行过，保存积分
-	if (STATE.running && gameStartTime) {
-		saveGameScore();
-	}
-
 	STATE.running = false; STATE.paused = false;
 	STATE.score = 0; STATE.level = 0; STATE.correct = 0; STATE.wrong = 0; STATE.correctCounter = 0; STATE.levelProgress = 0;
 	items = [];
 	bird.x = 120; bird.y = canvas.height - 120; bird.size = 16; bird.target = null;
 	bird.idleMode = false; bird.idleTimer = 0; bird.nextIdleTarget = null; // 重置空闲状态
-	gameStartTime = null; // 重置游戏开始时间
 
 	// 停止背景音乐
 	if (bgMusic) {
@@ -2508,7 +2384,6 @@ function onClickCanvas(e) {
 function startGame() {
 	if (STATE.running) return;
 	STATE.running = true; STATE.paused = false;
-	gameStartTime = Date.now(); // 记录游戏开始时间
 	overlay.classList.add('hidden');
 	startBtn.disabled = true; pauseBtn.disabled = false;
 

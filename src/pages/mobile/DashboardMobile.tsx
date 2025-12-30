@@ -8,7 +8,6 @@ import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../../context/AuthContext'
 import { getAvailablePapers, checkPaperCompleted } from '../../api/exams'
-import { getMyGameScore } from '../../api/game'
 import type { PaperInfo } from '../../api/exams'
 
 export default function DashboardMobile() {
@@ -38,12 +37,6 @@ export default function DashboardMobile() {
     enabled: !!session?.user.id && !!papers && papers.length > 0,
   })
 
-  // 获取游戏积分（仅学生）
-  const { data: gameScore } = useQuery({
-    queryKey: ['my-game-score', session?.user.id],
-    queryFn: () => getMyGameScore('dazui'),
-    enabled: !!session && profile?.role === 'student',
-  })
 
   if (authLoading) {
     return (
@@ -123,32 +116,16 @@ export default function DashboardMobile() {
 
         {/* 游戏入口（仅学生） */}
         {profile?.role === 'student' && (
-          <div className="grid grid-cols-2 gap-3">
-            <Link
-              to="/game/dazui"
-              className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center space-x-3 mb-2">
-                <i className="fas fa-gamepad text-[#2E8B57] text-xl"></i>
-                <span className="font-semibold text-gray-800">大嘴鸟游戏</span>
-              </div>
-              {gameScore && (
-                <p className="text-xs text-gray-600">
-                  最高分：{gameScore.best_score} · Lv.{gameScore.level}
-                </p>
-              )}
-            </Link>
-            <Link
-              to="/game/ranking"
-              className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
-            >
-              <div className="flex items-center space-x-3 mb-2">
-                <i className="fas fa-trophy text-[#FFA500] text-xl"></i>
-                <span className="font-semibold text-gray-800">游戏排行</span>
-              </div>
-              <p className="text-xs text-gray-600">查看排名</p>
-            </Link>
-          </div>
+          <Link
+            to="/game/dazui"
+            className="bg-white rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow"
+          >
+            <div className="flex items-center space-x-3">
+              <i className="fas fa-gamepad text-[#2E8B57] text-xl"></i>
+              <span className="font-semibold text-gray-800">大嘴鸟游戏</span>
+            </div>
+            <p className="text-xs text-gray-600 mt-2">字词学习游戏，寓教于乐</p>
+          </Link>
         )}
 
         {/* 待考试卷 */}

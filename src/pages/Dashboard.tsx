@@ -1,10 +1,9 @@
 import { useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Gamepad2, Trophy } from 'lucide-react'
+import { Gamepad2 } from 'lucide-react'
 import { useAuth } from '../context/AuthContext'
 import { getAvailablePapers, checkPaperCompleted } from '../api/exams'
-import { getMyGameScore } from '../api/game'
 import { AdminDashboard } from '../components/AdminDashboard'
 import type { PaperInfo } from '../api/exams'
 
@@ -35,12 +34,6 @@ export default function Dashboard() {
     enabled: !!session?.user.id && !!papers && papers.length > 0,
   })
 
-  // 获取游戏积分（仅学生）
-  const { data: gameScore } = useQuery({
-    queryKey: ['my-game-score', session?.user.id],
-    queryFn: () => getMyGameScore('dazui'),
-    enabled: !!session && profile?.role === 'student',
-  })
 
   if (authLoading) {
     return (
@@ -101,52 +94,25 @@ export default function Dashboard() {
 
       {/* 学生端游戏入口 */}
       {profile?.role === 'student' && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Link
-            to="/game/dazui"
-            className="card block transition hover:shadow-md border-2 border-brand-200 hover:border-brand-400 bg-gradient-to-br from-brand-50 to-white"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                <div className="h-12 w-12 rounded-xl bg-brand-600 flex items-center justify-center">
-                  <Gamepad2 className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-900 mb-1">大嘴鸟游戏</h3>
-                <p className="text-xs text-slate-600 mb-2">字词学习游戏，寓教于乐</p>
-                {gameScore && (
-                  <div className="flex items-center gap-3 text-xs">
-                    <span className="text-slate-600">最高分：<strong className="text-brand-600">{gameScore.best_score}</strong></span>
-                    <span className="text-slate-600">等级：<strong className="text-brand-600">Lv.{gameScore.level}</strong></span>
-                  </div>
-                )}
-              </div>
-              <div className="flex-shrink-0">
-                <span className="btn btn-primary text-xs">开始游戏</span>
+        <Link
+          to="/game/dazui"
+          className="card block transition hover:shadow-md border-2 border-brand-200 hover:border-brand-400 bg-gradient-to-br from-brand-50 to-white"
+        >
+          <div className="flex items-center gap-4">
+            <div className="flex-shrink-0">
+              <div className="h-12 w-12 rounded-xl bg-brand-600 flex items-center justify-center">
+                <Gamepad2 className="h-6 w-6 text-white" />
               </div>
             </div>
-          </Link>
-          <Link
-            to="/game/ranking"
-            className="card block transition hover:shadow-md border-2 border-slate-200 hover:border-slate-300"
-          >
-            <div className="flex items-center gap-4">
-              <div className="flex-shrink-0">
-                <div className="h-12 w-12 rounded-xl bg-amber-500 flex items-center justify-center">
-                  <Trophy className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-semibold text-slate-900 mb-1">游戏排行榜</h3>
-                <p className="text-xs text-slate-600">查看所有学生的游戏成绩排名</p>
-              </div>
-              <div className="flex-shrink-0">
-                <span className="btn btn-secondary text-xs">查看排名</span>
-              </div>
+            <div className="flex-1">
+              <h3 className="font-semibold text-slate-900 mb-1">大嘴鸟游戏</h3>
+              <p className="text-xs text-slate-600">字词学习游戏，寓教于乐</p>
             </div>
-          </Link>
-        </div>
+            <div className="flex-shrink-0">
+              <span className="btn btn-primary text-xs">开始游戏</span>
+            </div>
+          </div>
+        </Link>
       )}
 
       {/* 学生端待办与提醒 */}
