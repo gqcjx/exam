@@ -250,20 +250,36 @@ export const router = createBrowserRouter(
     basename: (() => {
       if (typeof window === 'undefined') return '/exam'
       
+      const currentPath = window.location.pathname
+      
       // 如果访问的是 /exam/index.html，重定向到 /exam/
-      if (window.location.pathname === '/exam/index.html') {
+      if (currentPath === '/exam/index.html') {
         const search = window.location.search
         const hash = window.location.hash
         window.history.replaceState(null, '', '/exam/' + search + hash)
+        return '/exam'
       }
       
-      // 检查是否在 Netlify 域名下，或者路径不是以 /exam 开头
+      // 检查是否在 Netlify 域名下
       const isNetlify = window.location.hostname.includes('netlify.app') || 
                        window.location.hostname.includes('netlify.com')
-      const pathStartsWithExam = window.location.pathname.startsWith('/exam')
+      
+      // 如果访问根路径 "/"，使用空 basename
+      if (currentPath === '/' || currentPath === '') {
+        return ''
+      }
+      
+      // 如果路径以 /exam 开头，使用 /exam 作为 basename
+      if (currentPath.startsWith('/exam')) {
+        return '/exam'
+      }
+      
       // 如果在 Netlify 且路径不是 /exam 开头，使用根路径
-      if (isNetlify && !pathStartsWithExam) return ''
-      // 否则使用 /exam（兼容 GitHub Pages）
+      if (isNetlify) {
+        return ''
+      }
+      
+      // 默认使用 /exam（兼容 GitHub Pages）
       return '/exam'
     })(),
   }
